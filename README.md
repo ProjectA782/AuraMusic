@@ -73,18 +73,6 @@ private key and the ability to upgrade an installed v1.0 are the same thing, and
 Git history it cannot be taken out without rewriting the repository. Generate your own key for
 any fork.
 
-### Install
-
-```bash
-adb connect <tv-ip>:5555
-adb install -r app/build/outputs/apk/foss/release/app-foss-release.apk
-adb shell am start -W -n com.aura.music/com.aura.music.MainActivityAlias
-```
-
-Use `install -r`. An uninstall wipes the stored Spotify and Qobuz sessions. On a low-storage TV,
-run the AOT pass after installing — `adb shell cmd package compile -m speed -f com.aura.music` —
-it costs about a minute and is the difference between a slow first launch and a normal one.
-
 ## Repository layout
 
 ```
