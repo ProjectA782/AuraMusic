@@ -1,0 +1,19 @@
+# Copy this file to local.properties and fill in only the values you need.
+# local.properties is ignored by Git and must never be committed with real secrets.
+
+# Android SDK location. Your IDE usually writes this for you.
+sdk.dir=/path/to/Android/Sdk
+
+# Release signing (optional — only needed for `assembleFossRelease`).
+# The build falls back to app/keystore/release.keystore, which is itself Git-ignored.
+# The signing key and the published v1.0 upgrade path are the same thing: never commit it,
+# never lose it, and never let it into Git history.
+RELEASE_STORE_FILE=keystore/release.keystore
+RELEASE_STORE_PASSWORD=
+RELEASE_KEY_ALIAS=
+RELEASE_KEY_PASSWORD=
+
+# Optional: GitHub issue crash reporting for local builds.
+# Leave commented out unless you have a token scoped to the repository you own.
+# CRASH_REPORT_REPO=
+# CRASH_REPORT_TOKEN=

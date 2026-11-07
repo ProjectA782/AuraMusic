@@ -1,0 +1,93 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.Aura" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowMinWidthMinor">100%</item>
+        <item name="android:windowMinWidthMajor">100%</item>
+        <item name="android:windowNoTitle">true</item>
+        <!-- Page colour, and it has to stay the page colour. Before the process exists the only
+             thing that can paint is this window, so its three possible looks are our colour,
+             branded art (which reads as a second, static splash), or no window at all. Measured:
+             windowDisablePreview gives the third, and on this TV that is pure black - three
+             frames of it before the app's own panel arrives. With this colour the wait is at
+             least continuous with the splash, which paints the same #141218. -->
+        <item name="android:windowBackground">#141218</item>
+        <item name="android:enforceNavigationBarContrast" tools:ignore="NewApi">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- The same logo again for Android 12+, which ignores windowBackground in favour of its
+             own start-up window. Read only from API 31 up - inert on this TV, kept so that newer
+             devices get the animated icon instead of the static background. The launcher tile is
+             deliberately not used here - it is a full-bleed dark square, which on this colour is
+             the black screen that gets reported. -->
+        <item name="android:windowSplashScreenBackground" tools:ignore="NewApi">#141218</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:ignore="NewApi">@drawable/aura_splash_logo</item>
+    </style>
+
+    <!-- Widget Theme with Material 3 colors fallback for API < 31 -->
+    <style name="Theme.Widget.Aura" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:colorBackground">#E6E1E5</item>
+    </style>
+
+    <!-- Transparent theme for Music Recognizer Tile Service -->
+    <style name="Theme.Aura.Transparent" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <style name="AuraPlaylistWidgetCard">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <style name="AuraPlaylistWidgetArtworkFrame">
+        <item name="android:layout_width">64dp</item>
+        <item name="android:layout_height">64dp</item>
+    </style>
+
+    <style name="AuraPlaylistWidgetArtwork">
+        <item name="android:layout_width">64dp</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:scaleType">centerCrop</item>
+        <item name="android:src">@mipmap/ic_launcher</item>
+        <item name="android:contentDescription">@string/widget_playlists</item>
+    </style>
+
+    <style name="AuraPlaylistWidgetCardPlayButton">
+        <item name="android:layout_width">26dp</item>
+        <item name="android:layout_height">26dp</item>
+        <item name="android:layout_gravity">bottom|end</item>
+        <item name="android:layout_marginEnd">3dp</item>
+        <item name="android:layout_marginBottom">3dp</item>
+        <item name="android:background">@drawable/widget_play_button_circular</item>
+    </style>
+
+    <style name="AuraPlaylistWidgetCardPlayIcon">
+        <item name="android:layout_width">15dp</item>
+        <item name="android:layout_height">15dp</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:src">@drawable/ic_widget_play_low</item>
+        <item name="android:contentDescription">@string/play</item>
+    </style>
+
+    <style name="AuraPlaylistWidgetCardTitle">
+        <item name="android:layout_width">68dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">5dp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:gravity">center</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+</resources>
