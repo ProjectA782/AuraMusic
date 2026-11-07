@@ -10,6 +10,9 @@ if (localPropertiesFile.exists()) {
 val baseApplicationId = "com.aura.music"
 val applicationIdOverride = System.getenv("AURA_APPLICATION_ID")?.takeIf { it.isNotBlank() }
 val appNameOverride = System.getenv("AURA_APP_NAME")?.takeIf { it.isNotBlank() }
+// Lets a test build be told it is older than the release already on GitHub, so the update prompt,
+// the download and the installer hand-off can be driven on a device without publishing anything.
+val versionNameOverride = System.getenv("AURA_VERSION_NAME")?.takeIf { it.isNotBlank() }
 val buildCommit =
     System.getenv("AURA_BUILD_COMMIT")
         ?.trim()
@@ -55,11 +58,12 @@ android {
         applicationId = applicationIdOverride ?: "com.aura.music"
         minSdk = 26
         targetSdk = 36
-        // v1 of the stable line. The debug build shares this number, so the first debug reinstall
-        // over the installed 0.9.2 (versionCode 28) needs adb's -d downgrade flag; after that both
-        // lines sit at 1 and a plain install -r works again.
+        // v1 of the stable line, held across every release so install -r always replaces in place.
+        // The debug build shares this number, so the first debug reinstall over the installed 0.9.2
+        // (versionCode 28) needed adb's -d downgrade flag; after that both lines sit at 1.
+        // What moves between releases is versionName, which is what the updater compares.
         versionCode = 1
-        versionName = "1.0"
+        versionName = versionNameOverride ?: "1.0.1"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         buildCommit?.let { versionName = "$baseVersionName+$it" }

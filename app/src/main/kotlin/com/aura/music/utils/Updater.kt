@@ -7,6 +7,8 @@ package com.aura.music.utils
 
 import com.aura.music.BuildConfig
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
@@ -31,15 +33,35 @@ data class ReleaseAsset(
 )
 
 object Updater {
-    private val client = HttpClient()
+    private val client = HttpClient {
+        // The GitHub API answers 403 to a request with no User-Agent, and the engine's own default
+        // identifies the HTTP library rather than the app.
+        defaultRequest {
+            headers {
+                append("User-Agent", "AuraMusic/${BuildConfig.VERSION_NAME}")
+                append("Accept", "application/vnd.github+json")
+            }
+        }
+        // Without this the cold-start check waits on a dead socket forever and never re-arms.
+        install(HttpTimeout) {
+            requestTimeoutMillis = 20_000
+            connectTimeoutMillis = 15_000
+            socketTimeoutMillis = 15_000
+        }
+    }
+
     var lastCheckTime = -1L
         private set
-    
+
     private var cachedReleaseInfo: ReleaseInfo? = null
     private var cachedAllReleases: List<ReleaseInfo> = emptyList()
-    
-    private const val CHECK_INTERVAL_MILLIS = 2 * 60 * 60 * 1000L // 2 hours
-    private const val GITHUB_API_BASE = "https://api.github.com/repos/FrancescoGrazioso/Aura"
+
+    /** Public so the shell can re-arm its check on the same interval it caches on. */
+    const val CHECK_INTERVAL_MILLIS = 2 * 60 * 60 * 1000L // 2 hours
+
+    // Aura's own releases. Upstream shipped this pointed at their repository, which would have
+    // offered Aura's users APKs signed by somebody else.
+    private const val GITHUB_API_BASE = "https://api.github.com/repos/ProjectA782/AuraMusic"
 
     /**
      * Compares two version strings.
@@ -96,6 +118,8 @@ object Updater {
             
             // Parse architecture and variant from filename
             val (arch, variant) = when {
+                // The asset Aura publishes: one universal APK holding all four ABIs.
+                name == "AuraMusic.apk" -> "universal" to "foss"
                 name == "Aura.apk" -> "universal" to "foss"
                 name == "Aura-with-Google-Cast.apk" -> "universal" to "gms"
                 name.startsWith("app-") && name.endsWith("-release.apk") -> {
@@ -118,6 +142,25 @@ object Updater {
     }
 
     /**
+     * Build one release record from a GitHub API object.
+     *
+     * A release's title is free text - ours reads "Aura Music v1.0" - and [compareVersions] can only
+     * read numbers out of it, so upstream's `name`-based comparison silently reported every release
+     * as older than the app. The tag is the version; `body` and `published_at` are absent or null on
+     * a release written without notes.
+     */
+    private fun releaseFrom(json: JSONObject): ReleaseInfo {
+        val tag = json.getString("tag_name")
+        return ReleaseInfo(
+            tagName = tag,
+            versionName = tag.removePrefix("v"),
+            description = json.optString("body", ""),
+            releaseDate = json.optString("published_at", ""),
+            assets = parseAssets(json.getJSONArray("assets")),
+        )
+    }
+
+    /**
      * Fetch latest release from GitHub API
      */
     suspend fun getLatestRelease(forceRefresh: Boolean = false): Result<ReleaseInfo> =
@@ -131,14 +174,13 @@ object Updater {
                 val response = client.get("$GITHUB_API_BASE/releases/latest")
                     .bodyAsText()
                 val json = JSONObject(response)
+                // A repository with no releases answers 200-with-nothing / 404 as
+                // {"message":"Not Found..."}; say so instead of failing on a missing key.
+                if (!json.has("tag_name")) {
+                    error(json.optString("message", "No release has been published yet"))
+                }
                 
-                val releaseInfo = ReleaseInfo(
-                    tagName = json.getString("tag_name"),
-                    versionName = json.getString("name"),
-                    description = json.getString("body"),
-                    releaseDate = json.getString("published_at"),
-                    assets = parseAssets(json.getJSONArray("assets"))
-                )
+                val releaseInfo = releaseFrom(json)
                 
                 cachedReleaseInfo = releaseInfo
                 lastCheckTime = System.currentTimeMillis()
@@ -171,14 +213,7 @@ object Updater {
                     }
                     
                     for (i in 0 until json.length()) {
-                        val releaseObj = json.getJSONObject(i)
-                        releases.add(ReleaseInfo(
-                            tagName = releaseObj.getString("tag_name"),
-                            versionName = releaseObj.getString("name"),
-                            description = releaseObj.getString("body"),
-                            releaseDate = releaseObj.getString("published_at"),
-                            assets = parseAssets(releaseObj.getJSONArray("assets"))
-                        ))
+                        releases.add(releaseFrom(json.getJSONObject(i)))
                     }
                     
                     page++
@@ -192,12 +227,11 @@ object Updater {
     /**
      * Get the download URL for the correct app variant
      */
-    fun getDownloadUrlForCurrentVariant(releaseInfo: ReleaseInfo): String? {
+    fun getAssetForCurrentVariant(releaseInfo: ReleaseInfo): ReleaseAsset? {
         val (currentArch, currentVariant) = getCurrentAppVariant()
-        
-        return releaseInfo.assets
-            .find { it.architecture == currentArch && it.variant == currentVariant }
-            ?.downloadUrl
+        val candidates = releaseInfo.assets.filter { it.variant == currentVariant }
+        return candidates.find { it.architecture == currentArch }
+            ?: candidates.find { it.architecture == "universal" }
     }
 
     /**

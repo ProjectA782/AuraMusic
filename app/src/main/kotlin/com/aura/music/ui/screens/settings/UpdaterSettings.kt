@@ -43,10 +43,12 @@ import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.R
 import com.aura.music.constants.CheckForUpdatesKey
 import com.aura.music.constants.UpdateNotificationsEnabledKey
+import com.aura.music.ui.component.ApkUpdateStatus
 import com.aura.music.ui.component.IconButton
 import com.aura.music.ui.component.Material3SettingsGroup
 import com.aura.music.ui.component.Material3SettingsItem
 import com.aura.music.ui.component.auraSettingsGutter
+import com.aura.music.ui.component.rememberApkUpdateState
 import com.aura.music.ui.utils.backToMain
 import com.aura.music.utils.Updater
 import com.aura.music.utils.rememberPreference
@@ -70,6 +72,7 @@ fun UpdaterScreen(
     var changelogContent by remember { mutableStateOf<String?>(null) }
     var checkError by remember { mutableStateOf<String?>(null) }
     val failedToCheckUpdatesTemplate = stringResource(R.string.failed_to_check_updates)
+    val updateState = rememberApkUpdateState()
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -85,6 +88,9 @@ fun UpdaterScreen(
                             latestVersion = releaseInfo.versionName
                             updateAvailable = hasUpdate
                             changelogContent = releaseInfo.description
+                            updateState.prepare(
+                                if (hasUpdate) Updater.getAssetForCurrentVariant(releaseInfo) else null,
+                            )
                         }
                     }.onFailure {
                         checkError = String.format(failedToCheckUpdatesTemplate, it.message ?: "Unknown error")
@@ -261,6 +267,24 @@ fun UpdaterScreen(
                             .padding(16.dp),
                 )
             }
+
+            // The old button handed the asset URL to ACTION_VIEW, which on a TV with no browser is
+            // a dead end. This one is the next real step: download, then install, then open the
+            // unknown-sources switch if the TV has not been told Aura may install apps.
+            Spacer(Modifier.height(16.dp))
+            Material3SettingsGroup(
+                items =
+                    listOf(
+                        Material3SettingsItem(
+                            title = { Text(stringResource(updateState.actionLabel)) },
+                            description = { ApkUpdateStatus(updateState) },
+                            icon = painterResource(R.drawable.download),
+                            enabled = updateState.actionEnabled,
+                            onClick = { updateState.act() },
+                        ),
+                    ),
+                useLowContrast = true,
+            )
         }
 
         Spacer(Modifier.height(32.dp))

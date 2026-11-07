@@ -92,7 +92,6 @@ fun AccountSettings(
     latestVersionName: String
 ) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
 
     val (innerTubeCookie, onInnerTubeCookieChange) = rememberPreference(InnerTubeCookieKey, "")
 
@@ -410,17 +409,17 @@ fun AccountSettings(
 
         Material3SettingsGroup(
             items = buildList {
-                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                if (BuildConfig.UPDATER_AVAILABLE && Updater.isUpdateAvailable(BuildConfig.BASE_VERSION_NAME, latestVersionName)) {
                     val releaseInfo = Updater.getCachedLatestRelease()
-                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
-                    if (downloadUrl != null) {
+                    val asset = releaseInfo?.let { Updater.getAssetForCurrentVariant(it) }
+                    if (asset != null) {
                         add(
                             Material3SettingsItem(
                                 title = { Text(stringResource(R.string.new_version_available)) },
                                 description = { Text(latestVersionName) },
                                 icon = painterResource(R.drawable.update),
                                 showBadge = true,
-                                onClick = { uriHandler.openUri(downloadUrl) }
+                                onClick = { navController.navigate("settings/updater") }
                             )
                         )
                     }

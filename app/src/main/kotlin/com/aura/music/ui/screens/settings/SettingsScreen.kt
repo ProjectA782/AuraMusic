@@ -24,7 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -49,7 +49,6 @@ fun SettingsScreen(
     navController: NavController,
     latestVersionName: String,
 ) {
-    val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val hasAndroidAuto = remember {
@@ -254,11 +253,11 @@ fun SettingsScreen(
                                 onClick = { navController.navigate("settings/about") }
                             )
                         )
-                        if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+                        if (BuildConfig.UPDATER_AVAILABLE && Updater.isUpdateAvailable(BuildConfig.BASE_VERSION_NAME, latestVersionName)) {
                             val releaseInfo = Updater.getCachedLatestRelease()
-                            val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
+                            val asset = releaseInfo?.let { Updater.getAssetForCurrentVariant(it) }
 
-                            if (downloadUrl != null) {
+                            if (asset != null) {
                                 add(
                                     Material3SettingsItem(
                                         icon = painterResource(R.drawable.update),
@@ -275,14 +274,14 @@ fun SettingsScreen(
                                             )
                                         },
                                         showBadge = true,
-                                        onClick = { uriHandler.openUri(downloadUrl) }
+                                        onClick = { navController.navigate("settings/updater") }
                                     )
                                 )
                             }
                         }
                     }
                 )
-            if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
+            if (BuildConfig.UPDATER_AVAILABLE && Updater.isUpdateAvailable(BuildConfig.BASE_VERSION_NAME, latestVersionName)) {
                 Spacer(modifier = Modifier.height(16.dp))
                 ReleaseNotesCard()
             }

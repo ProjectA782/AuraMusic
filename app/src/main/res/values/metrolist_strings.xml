@@ -390,6 +390,16 @@
     <string name="update_available_title">New update available</string>
     <string name="update_available_message">Aura %s is ready to download.</string>
     <string name="update_action">Update</string>
+    <string name="update_not_now">Not now</string>
+    <string name="download_update">Download update</string>
+    <string name="install_update">Install update</string>
+    <string name="update_download_progress">Downloaded %1$s of %2$s</string>
+    <string name="update_ready_to_install">Download complete. Press Install to apply it.</string>
+    <string name="grant_install_permission">Allow Aura to install apps</string>
+    <string name="install_permission_needed">Aura is not allowed to install apps yet. Turn the switch on, then press this button again.</string>
+    <string name="update_download_failed">Download failed: %s</string>
+    <string name="update_asset_missing">This release has no APK for this device.</string>
+    <string name="update_install_unavailable">No app installer is available on this device.</string>
     <string name="update_channel_name">App updates</string>
     <string name="update_channel_desc">Notifications about new app versions</string>
     <string name="kmp_upgrade_title">Aura KMP %s is available</string>

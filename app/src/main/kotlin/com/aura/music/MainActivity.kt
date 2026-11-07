@@ -222,6 +222,11 @@ import com.aura.music.ui.theme.DefaultThemeColor
 import com.aura.music.ui.theme.AuraTheme
 import com.aura.music.ui.utils.appBarScrollBehavior
 import com.aura.music.ui.utils.resetHeightOffset
+import com.aura.music.ui.component.ApkUpdateAction
+import com.aura.music.ui.component.ApkUpdateStatus
+import com.aura.music.ui.component.rememberApkUpdateState
+import com.aura.music.utils.ApkUpdateInstaller
+import com.aura.music.utils.ReleaseAsset
 import com.aura.music.utils.ReleaseInfo
 import com.aura.music.utils.SearchRoutes
 import com.aura.music.utils.SyncUtils
@@ -264,7 +269,7 @@ private val AuraSplashHiddenSemantics = Modifier.clearAndSetSemantics { }
 
 private data class AvailableUpdate(
     val release: ReleaseInfo,
-    val downloadUrl: String,
+    val asset: ReleaseAsset?,
     val isKmp: Boolean,
 ) {
     val dismissalKey = if (isKmp) DismissedKmpUpdateKey else DismissedStandaloneUpdateKey
@@ -543,6 +548,53 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /**
+     * The updates channel. Its content intent opens the app rather than the asset's download URL:
+     * this TV has no browser, and only the in-app prompt can carry a download through to install.
+     */
+    private fun notifyUpdateAvailable(update: AvailableUpdate) {
+        val pending =
+            PendingIntent.getActivity(
+                this,
+                1001,
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notificationText =
+            if (update.isKmp) {
+                getString(R.string.kmp_upgrade_warning)
+            } else {
+                update.release.versionName
+            }
+        val notification =
+            NotificationCompat
+                .Builder(this, "updates")
+                .setSmallIcon(R.drawable.update)
+                .setContentTitle(
+                    if (update.isKmp) {
+                        getString(R.string.kmp_upgrade_title, update.release.versionName)
+                    } else {
+                        getString(R.string.update_available_title)
+                    },
+                ).setContentText(notificationText)
+                .apply {
+                    if (update.isKmp) {
+                        setStyle(NotificationCompat.BigTextStyle().bigText(notificationText))
+                    }
+                }.setContentIntent(pending)
+                .setAutoCancel(true)
+                .build()
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            NotificationManagerCompat.from(this).notify(1001, notification)
+        }
+    }
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -556,73 +608,55 @@ class MainActivity : FragmentActivity() {
     ) {
         val checkForUpdates by rememberPreference(CheckForUpdatesKey, defaultValue = true)
         var availableUpdate by remember { mutableStateOf<AvailableUpdate?>(null) }
+        val updateState = rememberApkUpdateState()
 
         if (BuildConfig.UPDATER_AVAILABLE) {
             LaunchedEffect(checkForUpdates) {
-                if (checkForUpdates) {
-                    val preferences = dataStore.data.first()
-                    val notificationsEnabled = preferences[UpdateNotificationsEnabledKey] ?: true
-                    val (releaseInfo, hasUpdate) = Updater.checkForUpdate().getOrNull() ?: (null to false)
-                    releaseInfo?.let { onLatestVersionNameChange(it.versionName) }
+                // A TV is often left on for days, and a process that only checked at launch would go
+                // on offering the release it started against. Re-arm on the interval the release
+                // cache is valid for, so every pass after the first actually refetches.
+                while (true) {
+                    if (checkForUpdates) {
+                        val preferences = dataStore.data.first()
+                        val (releaseInfo, hasUpdate) = Updater.checkForUpdate().getOrNull() ?: (null to false)
+                        releaseInfo?.let { onLatestVersionNameChange(it.versionName) }
 
-                    val standaloneUpdate =
-                        releaseInfo
-                            ?.takeIf { hasUpdate }
-                            ?.let { release ->
-                                Updater.getDownloadUrlForCurrentVariant(release)?.let { downloadUrl ->
-                                    AvailableUpdate(release, downloadUrl, isKmp = false)
+                        val standaloneUpdate =
+                            releaseInfo
+                                ?.takeIf { hasUpdate }
+                                ?.let { release ->
+                                    AvailableUpdate(
+                                        release = release,
+                                        // A release whose assets name no APK for this build still
+                                        // counts as newer: the prompt says so rather than pretending
+                                        // that nothing was published.
+                                        asset = Updater.getAssetForCurrentVariant(release),
+                                        isKmp = false,
+                                    )
                                 }
+                        // Upstream offers its Aura-KMP rewrite here in preference to its own
+                        // release. Aura has no KMP build and must not point users at another app,
+                        // so only Aura's own releases are offered. The isKmp plumbing below is left
+                        // in place to keep future upstream merges small.
+                        val offered =
+                            standaloneUpdate?.takeUnless {
+                                it.release.tagName == preferences[it.dismissalKey]
                             }
-                    // Upstream offers its Aura-KMP rewrite here in preference to its own
-                    // release. Aura has no KMP build and must not point users at another app,
-                    // so only Aura's own releases are offered. The isKmp plumbing below is left
-                    // in place to keep future upstream merges small.
-                    val update = standaloneUpdate
-                    availableUpdate = update?.takeUnless {
-                        it.release.tagName == preferences[it.dismissalKey]
-                    }
+                        availableUpdate = offered
+                        updateState.prepare(offered?.asset)
 
-                    if (update != null && notificationsEnabled) {
-                        val intent = Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri())
-                        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                        val pending = PendingIntent.getActivity(this@MainActivity, 1001, intent, flags)
-                        val notificationText =
-                            if (update.isKmp) {
-                                getString(R.string.kmp_upgrade_warning)
-                            } else {
-                                update.release.versionName
-                            }
-                        val notification =
-                            NotificationCompat
-                                .Builder(this@MainActivity, "updates")
-                                .setSmallIcon(R.drawable.update)
-                                .setContentTitle(
-                                    if (update.isKmp) {
-                                        getString(R.string.kmp_upgrade_title, update.release.versionName)
-                                    } else {
-                                        getString(R.string.update_available_title)
-                                    },
-                                )
-                                .setContentText(notificationText)
-                                .apply {
-                                    if (update.isKmp) {
-                                        setStyle(NotificationCompat.BigTextStyle().bigText(notificationText))
-                                    }
-                                }
-                                .setContentIntent(pending)
-                                .setAutoCancel(true)
-                                .build()
-
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                            ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) ==
-                            PackageManager.PERMISSION_GRANTED
-                        ) {
-                            NotificationManagerCompat.from(this@MainActivity).notify(1001, notification)
+                        if (offered == null) {
+                            // 27 MB of APK has no business sitting in the cache once the app is current.
+                            ApkUpdateInstaller.deleteDownloaded(this@MainActivity)
+                        } else if (preferences[UpdateNotificationsEnabledKey] ?: true) {
+                            notifyUpdateAvailable(offered)
                         }
+                    } else {
+                        onLatestVersionNameChange(BuildConfig.BASE_VERSION_NAME)
+                        availableUpdate = null
+                        updateState.prepare(null)
                     }
-                } else {
-                    onLatestVersionNameChange(BuildConfig.BASE_VERSION_NAME)
-                    availableUpdate = null
+                    delay(Updater.CHECK_INTERVAL_MILLIS)
                 }
             }
         }
@@ -1797,25 +1831,15 @@ class MainActivity : FragmentActivity() {
                                             text = update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
                                             style = MaterialTheme.typography.bodySmall,
                                         )
+                                        ApkUpdateStatus(updateState)
                                     }
                                 },
                                 confirmButton = {
-                                    TextButton(
-                                        onClick = {
-                                            dismissUpdate()
-                                            startActivity(Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri()))
-                                        },
-                                    ) {
-                                        Text(
-                                            stringResource(
-                                                if (update.isKmp) R.string.kmp_upgrade_action else R.string.update_action,
-                                            ),
-                                        )
-                                    }
+                                    ApkUpdateAction(updateState)
                                 },
                                 dismissButton = {
                                     TextButton(onClick = dismissUpdate) {
-                                        Text(stringResource(R.string.kmp_upgrade_later))
+                                        Text(stringResource(R.string.update_not_now))
                                     }
                                 },
                             )
