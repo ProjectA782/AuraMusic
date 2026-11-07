@@ -165,27 +165,6 @@ val CrashReportingEnabledKey = booleanPreferencesKey("crashReportingEnabled")
 
 val EnableDynamicIconKey = booleanPreferencesKey("enableDynamicIcon")
 
-val EnableDiscordRPCKey = booleanPreferencesKey("discordRPCEnable")
-val DiscordInfoDismissedKey = booleanPreferencesKey("discordInfoDismissed")
-val DiscordUsernameKey = stringPreferencesKey("discordUsername")
-val DiscordNameKey = stringPreferencesKey("discordName")
-val DiscordAvatarKey = stringPreferencesKey("discordAvatar")
-val DiscordStatusKey = stringPreferencesKey("discordStatus")
-// Aura's own discordButton*Text/Visible keys were dropped with its Discord settings screen;
-// upstream's Label/Enabled/Url keys below are the ones the new Discord stack reads.
-val DiscordAdvancedModeKey = booleanPreferencesKey("discordAdvancedMode")
-val DiscordActivityTypeKey = stringPreferencesKey("discordActivityType")
-val DiscordActivityNameKey = stringPreferencesKey("discordActivityName")
-val DiscordStateTemplateKey = stringPreferencesKey("discordStateTemplate")
-val DiscordDetailsTemplateKey = stringPreferencesKey("discordDetailsTemplate")
-val DiscordButton1EnabledKey = booleanPreferencesKey("discordButton1Enabled")
-val DiscordButton1LabelKey = stringPreferencesKey("discordButton1Label")
-val DiscordButton1UrlKey = stringPreferencesKey("discordButton1Url")
-val DiscordButton2EnabledKey = booleanPreferencesKey("discordButton2Enabled")
-val DiscordButton2LabelKey = stringPreferencesKey("discordButton2Label")
-val DiscordButton2UrlKey = stringPreferencesKey("discordButton2Url")
-val DiscordUserStatusKey = stringPreferencesKey("discordUserStatus")
-
 // Listen Together
 val ListenTogetherServerUrlKey = stringPreferencesKey("listenTogetherServerUrl")
 val ListenTogetherUsernameKey = stringPreferencesKey("listenTogetherUsername")
@@ -201,17 +180,6 @@ val ListenTogetherRoomCodeKey = stringPreferencesKey("listenTogetherRoomCode")
 val ListenTogetherUserIdKey = stringPreferencesKey("listenTogetherUserId")
 val ListenTogetherIsHostKey = booleanPreferencesKey("listenTogetherIsHost")
 val ListenTogetherSessionTimestampKey = longPreferencesKey("listenTogetherSessionTimestamp")
-
-val LastFMSessionKey = stringPreferencesKey("lastfmSession")
-val LastFMUsernameKey = stringPreferencesKey("lastfmUsername")
-val EnableLastFMScrobblingKey = booleanPreferencesKey("lastfmScrobblingEnable")
-val LastFMUseNowPlaying = booleanPreferencesKey("lastfmUseNowPlaying")
-
-val LastFMUseSendLikes = booleanPreferencesKey("lastfmUseSendLikes")
-
-val ScrobbleDelayPercentKey = floatPreferencesKey("scrobbleDelayPercent")
-val ScrobbleMinSongDurationKey = intPreferencesKey("scrobbleMinSongDuration")
-val ScrobbleDelaySecondsKey = intPreferencesKey("scrobbleDelaySeconds")
 
 // Spotify Integration
 val EnableSpotifyKey = booleanPreferencesKey("enableSpotify")

@@ -200,15 +200,6 @@
             </intent-filter>
         </activity-alias>
 
-        <activity
-            android:name=".discord.DiscordOAuthActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.AppCompat.NoActionBar">
-            <!-- The old upstream OAuth redirect scheme was removed with the Discord feature; the
-                 activity stays declared because the Discord sources are still compiled in. -->
-        </activity>
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.FileProvider"

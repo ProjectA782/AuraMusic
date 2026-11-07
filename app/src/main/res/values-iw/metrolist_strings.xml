@@ -183,7 +183,6 @@
     <string name="release_notes">הערות שחרור</string>
     <string name="changelog">יומן שינויים</string>
     <string name="changelog_empty">אין יומני שינויים זמינים</string>
-    <string name="github_releases_url">https://github.com/FrancescoGrazioso/Meld/releases</string>
     <string name="list_bullet">•</string>
     <string name="view_on_github">הצג ב-GitHub</string>
     <string name="current_version">גרסה נוכחית</string>
@@ -299,10 +298,6 @@
     <string name="integrations">אינטגרציות</string>
     <string name="username">שם משתמש</string>
     <string name="password">סיסמה</string>
-    <string name="lastfm_integration">שילוב Last.fm</string>
-    <string name="lastfm_now_playing">שלח \"מתנגן עכשיו\"</string>
-    <string name="last_fm_send_likes">שלח לייקים/סילוק לייקים</string>
-    <string name="last_fm_send_likes_description">שירי אהבתי/לא אהבתי ב-Last.fm כשהם מקבלים לייק/לא לייק ב-Meld</string>
     <string name="logging_in">מתחבר…</string>
     <string name="hide_video_songs">הסתר שירי וידאו</string>
     <string name="hide_youtube_shorts">הסתר סרטוני יוטיוב קצרים</string>
@@ -352,7 +347,7 @@
     <string name="wrapped_intro_title">MELD</string>
     <string name="wrapped_intro_subtitle">הגיע הזמן לראות למה האזנתם</string>
     <string name="wrapped_intro_button">בואו נתחיל!</string>
-    <string name="wrapped_logo_content_description">Meld לוגו</string>
+    <string name="wrapped_logo_content_description">Aura לוגו</string>
     <string name="wrapped_year">2025</string>
     <string name="wrapped_ready_title">העטיפה שלך מוכנה!</string>
     <string name="wrapped_ready_subtitle">הגיע הזמן לראות מה אהבתם השנה.</string>
@@ -392,12 +387,12 @@
     <string name="view_channel">צפה בערוץ</string>
     <string name="album_art">עטיפת אלבום</string>
     <string name="no_song_playing">אין שיר מתנגן</string>
-    <string name="tap_to_open">הקש כדי לפתוח את Meld</string>
+    <string name="tap_to_open">הקש כדי לפתוח את Aura</string>
     <string name="previous">הקודם</string>
     <string name="play_pause">הפעלה/השהיה</string>
     <string name="like">לייק</string>
     <string name="not_playing">אין שיר מתנגן</string>
-    <string name="tap_to_play">הקש כדי לפתוח את Meld</string>
+    <string name="tap_to_play">הקש כדי לפתוח את Aura</string>
     <string name="widget_description">ווידג\'ט נגן מוזיקה עם פקדי הפעלה</string>
     <string name="turntable_widget_description">ווידג\'ט מוזיקה עגול עם בקרות הפעלה ולייק</string>
     <string name="widget_music_player">נגן מוזיקה</string>
@@ -552,7 +547,7 @@
     <string name="crash_description">אירעה שגיאה בלתי צפויה. אנא שתף את דוח הקריסה כדי לעזור לנו לפתור את הבעיה.</string>
     <string name="crash_share_logs">שתף יומנים</string>
     <string name="crash_share_title">שתף דוח קריסה</string>
-    <string name="crash_report_subject">דוח התרסקות Meld</string>
+    <string name="crash_report_subject">דוח התרסקות Aura</string>
     <string name="crash_close">סגור</string>
     <string name="crash_no_log">אין יומן קריסה זמין</string>
     <string name="palette_dynamic">דינמי</string>
@@ -596,7 +591,7 @@
     <string name="clear_recognition_history_confirm">האם אתה בטוח שברצונך לנקות את כל היסטוריית הזיהוי?</string>
     <string name="delete_from_history">מחק מההיסטוריה</string>
     <string name="re_listen">תקשיב שוב</string>
-    <string name="play_on_app">נגן ב-Meld</string>
+    <string name="play_on_app">נגן ב-Aura</string>
     <string name="qs_tile_music_recognizer">זיהוי מוזיקה</string>
     <string name="recognition_notification_channel_name">זיהוי מוזיקה</string>
     <string name="recognition_notification_channel_desc">מציג התראה תוך זיהוי שיר מהגדרות מהירות</string>
@@ -604,7 +599,7 @@
     <string name="recognition_notification_processing">מזהה...</string>
     <string name="recognition_notification_no_match">לא נמצאה התאמה</string>
     <string name="recognition_notification_failed">הזיהוי נכשל</string>
-    <string name="listen_on_metrolist">האזן ב-Meld</string>
+    <string name="listen_on_metrolist">האזן ב-Aura</string>
     <string name="map_csv_columns">מפה עמודות CSV</string>
     <string name="first_row_is_header">השורה הראשונה היא כותרת עליונה</string>
     <string name="artist_name_column">עמודת שם האמן</string>
@@ -614,21 +609,6 @@
     <string name="importing_csv">מייבא CSV</string>
     <string name="importing_playlist">מייבא רשימת השמעה</string>
     <string name="recently_converted">הומר לאחרונה</string>
-    <string name="discord_status">סטטוס</string>
-    <string name="discord_status_online">אונליין</string>
-    <string name="discord_status_idle">לבטל</string>
-    <string name="discord_status_dnd">אל תפריע</string>
-    <string name="discord_buttons">כפתורים</string>
-    <string name="discord_button_1">כפתור 1</string>
-    <string name="discord_button_2">כפתור 2</string>
-    <string name="discord_information_warning">תכונה זו משתמשת בספריית KizzyRPC כדי להתחבר לשער של Discord ולהגדיר את סטטוס הנוכחות העשירה שלך. אמנם לא התרחשו השעיות ידועות של חשבון משימוש דומה, אך שיטה זו אינה נתמכת רשמית על ידי Discord ועשויה להיחשב כהפרה של תנאי השירות. האסימון שלך חולץ באופן מקומי ולעולם לא נשלח לשרתים של צד שלישי. המשך לפי שיקול דעתך.</string>
-    <string name="discord_activity_type">סוג פעילות</string>
-    <string name="discord_activity_playing">מנגן</string>
-    <string name="discord_activity_listening">מקשיב</string>
-    <string name="discord_activity_watching">צופה</string>
-    <string name="discord_activity_competing">מתחרה</string>
-    <string name="discord_rpc_preview">תצוגה מקדימה של נוכחות עשירה</string>
-    <string name="discord_presence">נוכחות</string>
     <string name="parsed_from_link">מנותח מהקישור</string>
     <string name="more_options">אפשרויות נוספות</string>
     <string name="mixes">מיקסים</string>
@@ -636,8 +616,6 @@
     <string name="hide_status_bar_fullscreen_desc">הסתרת סרגל הסטטוס כשמצב מסך מלא של המילים מופעל</string>
     <string name="show_interval_indicator">הצג מחוון מרווחים</string>
     <string name="show_interval_indicator_desc">מציג סרגל התקדמות במהלך פערים ארוכים אינסטרומנטלים</string>
-    <string name="discord_use_details">השתמש בפרטים במקום במדינה</string>
-    <string name="discord_use_details_description">הצג את שם השיר במקום בולט במקום את שמות האמנים</string>
     <string name="alarm_playlist_helper">בחר איזו רשימת השמעה תפעיל התראה.</string>
     <string name="alarm_next_trigger">הטריגר הבא</string>
     <string name="crossfade_beta_title">תכונת בטא</string>
@@ -660,11 +638,10 @@
         <item quantity="two">פרופילים %d</item>
         <item quantity="other">פרופילים %d</item>
     </plurals>
-    <string name="listening_to_metrolist">מקשיבים ל-Meld</string>
+    <string name="listening_to_metrolist">מקשיבים ל-Aura</string>
     <string name="copy_all_lyrics">העתק את כל המילים</string>
     <string name="ai_error_unexpected">תוצאת תרגום לא צפויה</string>
     <string name="ai_system_prompt_desc">הוראות מותאמות אישית שנשלחות למודל AI. השאר ריק כדי להשתמש בהנחיית ברירת המחדל.</string>
     <string name="ai_system_prompt_placeholder">השתמש ב-{lineCount} כמציין מיקום עבור מספר השורות לתרגום.</string>
     <string name="login_successful">כניסה מוצלחת!</string>
-    <string name="discord_button_text_variables">משתנים: {song_name}, {artist_name}, {album_name}</string>
 </resources>

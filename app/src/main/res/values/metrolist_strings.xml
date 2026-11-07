@@ -264,7 +264,6 @@
     <string name="release_notes">Release notes</string>
     <string name="changelog">Changelog</string>
     <string name="changelog_empty">No changelogs available</string>
-    <string name="github_releases_url">https://github.com/FrancescoGrazioso/Meld/releases</string>
     <string name="list_bullet">•</string>
     <string name="view_on_github">View on GitHub</string>
     <string name="current_version">Current version</string>
@@ -420,17 +419,10 @@
     <string name="password">Password</string>
 
     <!-- Last.fm -->
-    <string name="lastfm_integration">Last.fm integration</string>
     <string name="enable_scrobbling">Enable scrobbling</string>
-    <string name="lastfm_now_playing">Send Now Playing status</string>
-    <string name="last_fm_send_likes">Sync Loved and Unloved</string>
-    <string name="last_fm_send_likes_description">Love or unlove songs in Last.fm when you like or unlike them in Aura</string>
     <string name="logging_in">Logging in…</string>
 
     <string name="scrobbling_configuration">Scrobbling configuration</string>
-    <string name="scrobble_min_track_duration">Scrobble songs longer than (seconds)</string>
-    <string name="scrobble_delay_percent">Scrobble delay (percentage)</string>
-    <string name="scrobble_delay_minutes">Scrobble delay (minutes)</string>
     <string name="hide_video_songs">Hide video songs</string>
     <string name="hide_youtube_shorts">Hide YouTube Shorts</string>
 
@@ -798,43 +790,7 @@
     <string name="recently_converted">Recently converted</string>
     <string name="column_label">Column %d</string>
 
-    <string name="discord_connect_description">Sign in with Discord to share what you\'re listening to</string>
 
-    <string name="discord_status_connected">Connected</string>
-    <string name="discord_status_authorizing">Authorizing…</string>
-    <string name="discord_status_authorized">Authorized</string>
-    <string name="discord_status_not_initialized">Not initialized</string>
-    <string name="discord_error_loopback_timeout">Discord didn\'t respond in time. Please try again.</string>
-    <string name="discord_error_loopback_unbound">Couldn\'t open a local callback port. Please free one and try again.</string>
-    <string name="discord_error_no_browser">No browser was found to complete Discord authorization.</string>
-    <string name="discord_error_token_refresh_failed">Discord session expired. Please reconnect.</string>
-    <string name="discord_error_invalid_scope">Discord rejected the connection. Please reconnect and grant the required permission.</string>
-    <string name="discord_error_banner_title">Discord error</string>
-    <string name="discord_rpc_preview">Rich Presence preview</string>
-    <string name="discord_integration">Discord Integration</string>
-    <string name="enable_discord_rpc">Enable Rich Presence</string>
-    <string name="discord_advanced_mode">Advanced mode</string>
-    <string name="discord_advanced_mode_description">Customize every field of your Rich Presence with placeholders</string>
-    <string name="discord_presence">Presence</string>
-    <string name="discord_activity_type">Activity type</string>
-    <string name="discord_activity_playing">Playing</string>
-    <string name="discord_activity_listening">Listening</string>
-    <string name="discord_activity_watching">Watching</string>
-    <string name="discord_activity_competing">Competing</string>
-    <string name="discord_activity_name">Activity name</string>
-    <string name="discord_state">State</string>
-    <string name="discord_details">Details</string>
-    <string name="discord_buttons">Buttons</string>
-    <string name="discord_button_1">Button 1</string>
-    <string name="discord_button_2">Button 2</string>
-    <string name="discord_enable_button_1">Show button 1</string>
-    <string name="discord_enable_button_2">Show button 2</string>
-    <string name="discord_button_label">Label</string>
-    <string name="discord_button_url">URL</string>
-    <string name="discord_status">Status</string>
-    <string name="discord_status_online">Online</string>
-    <string name="discord_status_idle">Idle</string>
-    <string name="discord_status_dnd">Do Not Disturb</string>
     <string name="speed_dial">Speed dial</string>
     <string name="pin_to_speed_dial">Pin to speed dial</string>
     <string name="unpin_from_speed_dial">Unpin from speed dial</string>
@@ -863,7 +819,6 @@
     <string name="credits_collaborators_section">Collaborators</string>
     <string name="credits_license_name">GNU General Public License v3.0</string>
     <string name="credits_license_desc">Free, open-source software. You may use, study, share, and improve it</string>
-    <string name="credits_discord">Discord server</string>
     <string name="credits_telegram">Telegram channel</string>
     <string name="credits_view_repo">View repository</string>
     <string name="buy_mo_a_coffee">Buy me a coffee!</string>
@@ -1001,8 +956,6 @@
     <string name="stream_source_android_vr_desc">Android VR clients (all versions).</string>
     <string name="stream_source_web_creator">WEB_CREATOR</string>
     <string name="stream_source_web_creator_desc">Creator web client.</string>
-    <string name="discord_use_details">Use details instead of state</string>
-    <string name="discord_use_details_description">Show the song title prominently instead of the artist name</string>
     <string name="alarm_playlist_helper">Choose which playlist the alarm will play</string>
     <string name="alarm_next_trigger">Next trigger</string>
     <string name="crossfade_beta_title">Beta feature!</string>
@@ -1039,11 +992,6 @@
     <string name="ai_system_prompt_desc">Custom instructions sent to the AI model. Leave empty to use the default prompt</string>
     <string name="ai_system_prompt_placeholder">Use {lineCount} as a placeholder for the number of lines to translate</string>
     <string name="login_successful">Login successful!</string>
-    <string name="discord_button_text_variables">Variables: {song_name}, {artist_name}, {album_name}</string>
-    <string name="discord_playing_metrolist">Playing Aura</string>
-    <string name="discord_watching_metrolist">Watching Aura</string>
-    <string name="discord_competing_metrolist">Competing in Aura</string>
-    <string name="discord_activity_name_description">Custom name for the activity. Leave empty to use the default</string>
     <string name="credits_website">Website</string>
     <string name="credits_instagram">Instagram</string>
     <string name="credits_github">GitHub</string>
@@ -1058,7 +1006,6 @@
     <string name="sort_by_duration">Duration</string>
     <string name="enable_musixmatch">Enable Musixmatch</string>
     <string name="enable_musixmatch_desc">Time-synced lyrics from Musixmatch (unofficial API, may be rate-limited)</string>
-    <string name="lastfm_api_credentials_missing">Last.fm API credentials are missing from this build.</string>
     <string name="spotify_integration">Spotify Integration</string>
     <string name="spotify_login">Log in with Spotify</string>
     <string name="spotify_login_description">Sign in with your Spotify account to load playlists, liked songs and recommendations. No developer account required.</string>
@@ -1206,11 +1153,6 @@
     <string name="error_subscribe_channel">Failed to update channel subscription</string>
     <string name="hold_to_recognize">Hold search icon to recognize music</string>
     <string name="recognized_track">Recognized Track</string>
-    <string name="discord_button_1_url">Button 1 URL</string>
-    <string name="discord_button_1_url_default">Default: current song on YouTube Music</string>
-    <string name="discord_button_2_url">Button 2 URL</string>
-    <string name="discord_button_2_url_default">Default: Aura on GitHub</string>
-    <string name="discord_button_url_description">Destination link opened when someone clicks the button. Must start with http:// or https://. Supports {song_name}, {artist_name}, {album_name}.</string>
     <string name="credits_developer">Developer</string>
     <string name="credits_original_project">Original Project</string>
     <string name="credits_based_on_metrolist">Aura is based on Metrolist, an open-source YouTube Music client.</string>
@@ -1226,5 +1168,4 @@
         <item quantity="one">%d file</item>
         <item quantity="other">%d files</item>
     </plurals>
-    <string name="discord_information_warning">Aura uses Discord\'s public OAuth2 and Gateway APIs to share what you\'re listening to. Authorization happens through a local browser session that closes itself after capturing the code — nothing is sent to third-party servers. Your token is stored on this device in encrypted preferences and is never shared. Aura connects directly to wss://gateway.discord.gg to publish your activity, and only requests the minimum scope required (sdk.social_layer_presence).</string>
 </resources>

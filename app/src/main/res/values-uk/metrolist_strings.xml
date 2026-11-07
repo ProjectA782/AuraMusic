@@ -158,16 +158,9 @@
     <string name="integrations">Інтеграції</string>
     <string name="username">Ім\'я користувача</string>
     <string name="password">Пароль</string>
-    <string name="lastfm_integration">Інтеграція з Last.fm</string>
     <string name="enable_scrobbling">Увімкнути скробблінг</string>
-    <string name="lastfm_now_playing">Надіслати «Зараз відтворюється»</string>
     <string name="scrobbling_configuration">Конфігурація скроблювання</string>
-    <string name="scrobble_min_track_duration">Пісні Scrobble довші за</string>
-    <string name="scrobble_delay_percent">Відсоток затримки Scrobble</string>
-    <string name="scrobble_delay_minutes">Затримка Scrobble у хвилинах</string>
     <string name="swipe_song_to_remove">Проведіть пальцем по пісні, щоб вилучити її зі списку відтворення</string>
-    <string name="last_fm_send_likes">Надіслати вподобання/не вподобання</string>
-    <string name="last_fm_send_likes_description">Пісні, які подобається/не подобається, на Last.fm, коли вони вподобані/зняті з Meld</string>
     <string name="hide_video_songs">Приховати відеопісні</string>
     <string name="primary_color_style">Основний колір</string>
     <string name="auto_scroll">Повторна синхронізація</string>
@@ -232,7 +225,7 @@
     <string name="wrapped_intro_title">MELD</string>
     <string name="wrapped_intro_subtitle">настав час подивитися, що ви слухали протягом усього цього року…</string>
     <string name="wrapped_intro_button">Ходімо!</string>
-    <string name="wrapped_logo_content_description">Логотип Meld</string>
+    <string name="wrapped_logo_content_description">Логотип Aura</string>
     <string name="wrapped_year">2025</string>
     <string name="wrapped_ready_title">ВАШ АУДІОПІДСУМОК ЗА РІК ГОТОВИЙ!</string>
     <string name="wrapped_ready_subtitle">Час подивитися, що вам сподобалося цього року…</string>
@@ -269,7 +262,7 @@
     <string name="system_equalizer">Системний еквалайзер</string>
     <string name="album_art">Обкладинка альбому</string>
     <string name="no_song_playing">Пісня не відтворюється</string>
-    <string name="tap_to_open">Натисніть, щоб відкрити Meld</string>
+    <string name="tap_to_open">Натисніть, щоб відкрити Aura</string>
     <string name="previous">Попередній</string>
     <string name="play_pause">Відтворення/Пауза</string>
     <string name="next">Далі</string>
@@ -334,7 +327,6 @@
     <string name="lyrics_provider_priority">Пріоритет постачальників текстів</string>
     <string name="lyrics_provider_priority_desc">Перетягуйте постачальників, щоб змінити їхній порядок. Чим вища позиція у списку, тим вищий пріоритет</string>
     <string name="choose_something_below">Виберіть щось із наведеного нижче</string>
-    <string name="github_releases_url">https://github.com/FrancescoGrazioso/Meld/releases</string>
     <string name="list_bullet">•</string>
     <string name="view_on_github">Переглянути на GitHub</string>
     <string name="current_version">Поточна версія</string>
@@ -430,7 +422,7 @@
     <string name="your_daily_discover">Ваші відкриття дня</string>
     <string name="view_channel">Переглянути канал</string>
     <string name="not_playing">Нічого не відтворюється</string>
-    <string name="tap_to_play">Натисніть, щоб відкрити Meld</string>
+    <string name="tap_to_play">Натисніть, щоб відкрити Aura</string>
     <string name="widget_music_player">Музичний плеєр</string>
     <string name="widget_turntable">Вініловий програвач</string>
     <string name="widget_recognizer_name">Розпізнавач музики</string>
@@ -529,7 +521,7 @@
     <string name="clear_recognition_history_confirm">Ви впевнені, що хочете очистити всю історію розпізнавання?</string>
     <string name="delete_from_history">Видалити з історії</string>
     <string name="re_listen">Переслухати</string>
-    <string name="play_on_app">Відтворити в Meld</string>
+    <string name="play_on_app">Відтворити в Aura</string>
     <string name="importing_playlist">Імпорт списку відтворення…</string>
     <string name="android_auto_target_playlist_not_set">Список відтворення не вибрано. Виберіть його в налаштуваннях Android Auto</string>
     <string name="widget_playlists">Списки відтворення</string>
@@ -617,8 +609,6 @@
     <string name="line_by_line_dialog_title">Ви впевнені?</string>
     <string name="line_by_line_dialog_desc">Це експериментальна функція, яка може працювати як з успіхом, так і з невдачею. \n\nЗа замовчуванням мова визначається на основі всієї пісні, але якщо ввімкнути цю опцію, вона буде визначатися по рядках. Це дозволить працювати з багатомовними піснями, АЛЕ мова може бути не завжди правильною (наприклад, якщо в українському тексті немає літер, характерних для української мови, він може бути транслітерований як російський). \n\nЯкщо у вас немає проблем, рекомендується залишити цю опцію вимкненою.</string>
     <string name="lyrics_romanize_macedonian">Романізувати македонську лірику</string>
-    <string name="discord_use_details">Використовуйте деталі замість штату</string>
-    <string name="discord_use_details_description">Помітно показувати назву пісні замість імен виконавців</string>
     <string name="lyrics_romanize_chinese">Романізація китайських текстів</string>
     <string name="enable_dynamic_icon">Увімкнути динамічний значок</string>
     <string name="pure_black_mini_player">Чисто чорний міні-плеєр</string>
@@ -627,7 +617,7 @@
     <string name="slide">Слайд</string>
     <string name="karaoke">Караоке</string>
     <string name="apple_music_style">Apple Music</string>
-    <string name="listening_to_metrolist">Слухаючи Meld</string>
+    <string name="listening_to_metrolist">Слухаючи Aura</string>
     <plurals name="profiles_count">
         <item quantity="one">%d профіль</item>
         <item quantity="few">%d профіли</item>

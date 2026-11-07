@@ -16,9 +16,7 @@ import com.aura.innertube.models.PodcastItem
 import com.aura.innertube.models.SongItem
 import com.aura.innertube.utils.completed
 import com.aura.innertube.utils.parseCookieString
-import com.aura.lastfm.LastFM
 import com.aura.music.constants.InnerTubeCookieKey
-import com.aura.music.constants.LastFMUseSendLikes
 import com.aura.music.constants.LastFullSyncKey
 import com.aura.music.constants.SYNC_COOLDOWN
 import com.aura.music.db.MusicDatabase
@@ -127,7 +125,6 @@ class SyncUtils @Inject constructor(
     private val _syncState = MutableStateFlow(SyncState())
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
-    private var lastfmSendLikes = false
     private var spotifySyncLikes = false
     private val spotifyMapper by lazy { com.aura.music.playback.SpotifyYouTubeMapper(database) }
     private val playlistsBeingModified = ConcurrentHashMap<String, AtomicInteger>()
@@ -154,13 +151,6 @@ class SyncUtils @Inject constructor(
         (playlistsBeingModified[playlistId]?.get() ?: 0) > 0 ||
                 pendingRemovals.any { (_, set) -> set.any { it.third == playlistId } }
     init {
-        context.dataStore.data
-            .map { it[LastFMUseSendLikes] ?: false }
-            .distinctUntilChanged()
-            .collectLatest(syncScope) {
-                lastfmSendLikes = it
-            }
-
         context.dataStore.data
             .map { it[com.aura.music.constants.SpotifySyncLikesKey] ?: false }
             .distinctUntilChanged()
@@ -619,19 +609,6 @@ class SyncUtils @Inject constructor(
             }
         } else {
             Timber.d("YouTube not logged in, skipping YouTube like sync for ${s.id}")
-        }
-
-        if (lastfmSendLikes) {
-            try {
-                val dbSong = database.song(s.id).firstOrNull()
-                LastFM.setLoveStatus(
-                    artist = dbSong?.artists?.joinToString { a -> a.name } ?: "",
-                    track = s.title,
-                    love = s.liked
-                )
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to update LastFM love status")
-            }
         }
 
         if (spotifySyncLikes) {

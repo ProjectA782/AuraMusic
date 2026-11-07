@@ -472,8 +472,6 @@ fun NavGraphBuilder.navigationBuilder(
         SpotifyFolderScreen(navController, folderUri, folderName)
     }
 
-    // Upstream replaced the in-app Discord login screen with DiscordOAuthActivity.
-
     composable("settings/updater") {
         UpdaterScreen(navController)
     }

@@ -72,20 +72,13 @@ android {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
         }
 
-        // LastFM API keys from GitHub Secrets
-        val lastFmKey = localProperties.getProperty("LASTFM_API_KEY") ?: System.getenv("LASTFM_API_KEY") ?: ""
-        val lastFmSecret = localProperties.getProperty("LASTFM_SECRET") ?: System.getenv("LASTFM_SECRET") ?: ""
-
-        buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
-        buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
-        buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
 
         // Crash reporting target: GitHub repo (owner/name) where Issues are created,
         // and a fine-grained PAT with issues:write scoped to that repo only.
         // Both must be present at build time for reporting to be active at runtime.
         val crashRepo = localProperties.getProperty("CRASH_REPORT_REPO")
-            ?: System.getenv("CRASH_REPORT_REPO") ?: "francescograzioso/Aura"
+            ?: System.getenv("CRASH_REPORT_REPO") ?: ""
         val crashToken = localProperties.getProperty("CRASH_REPORT_TOKEN")
             ?: System.getenv("CRASH_REPORT_TOKEN") ?: ""
         buildConfigField("String", "CRASH_REPORT_REPO", "\"$crashRepo\"")

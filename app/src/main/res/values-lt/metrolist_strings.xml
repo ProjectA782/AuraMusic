@@ -114,7 +114,6 @@
     <string name="updater">Atnaujinimas</string>
     <string name="username">Vartotojo vardas</string>
     <string name="password">Slaptažodis</string>
-    <string name="lastfm_integration">Last.fm integracija</string>
     <string name="enable_scrobbling">Įjungti skroblavimą</string>
     <string name="romanize_current_track">Romanizuoti dabartinę dainą</string>
     <string name="lyrics_offset">Teksto poslinkis</string>
@@ -191,7 +190,7 @@
     <string name="wrapped_intro_title">MELD</string>
     <string name="wrapped_intro_subtitle">laikas pamatyti, ką jūs klausėtės</string>
     <string name="wrapped_intro_button">pirmyn!</string>
-    <string name="wrapped_logo_content_description">„Meld” logotipas</string>
+    <string name="wrapped_logo_content_description">„Aura” logotipas</string>
     <string name="wrapped_year">2025</string>
     <string name="wrapped_ready_title">JŪSŲ WRAPPED YRA PARUOŠTAS!</string>
     <string name="wrapped_ready_subtitle">Metas pamatyti, kas jums patiko šiais metais.</string>
@@ -228,7 +227,7 @@
     <string name="error_playback_failed">Atkūrimo klaida</string>
     <string name="album_art">Albumo viršelis</string>
     <string name="no_song_playing">Nėra grojančios dainos</string>
-    <string name="tap_to_open">Spauskite, kad atidarytumėte „Meld”</string>
+    <string name="tap_to_open">Spauskite, kad atidarytumėte „Aura”</string>
     <string name="previous">Ankstesnis</string>
     <string name="play_pause">Leisti / pristabdyti</string>
     <string name="next">Kitas</string>
@@ -302,7 +301,6 @@
     <string name="release_notes">Leidimo pastabos</string>
     <string name="changelog">Pakeitimų sąrašas</string>
     <string name="changelog_empty">Nėra galimų pakeitimų sąrašų</string>
-    <string name="github_releases_url">https://github.com/FrancescoGrazioso/Meld/releases</string>
     <string name="list_bullet">•</string>
     <string name="view_on_github">Peržiūrėti GitHub</string>
     <string name="current_version">Dabartinė versija</string>
@@ -356,14 +354,8 @@
     <string name="density_restart_message">Ekrano elementų tankio nustatymo pakeitimas bus pritaikytas tik paleidus programėlę iš naujo. Ar norėtumėte tai padaryti dabar?</string>
     <string name="audio_offload_disabled_by_crossfade">Išjungta, kadangi Perėjimai yra įjungti</string>
     <string name="lyrics_romanize_as_main">Rodyti romanizuotus dainų žodžius kaip pagrindinius</string>
-    <string name="lastfm_now_playing">Siųsti dabar grojančią dainą</string>
-    <string name="last_fm_send_likes">Siųsti Mėgiamus/Nemėgiamus</string>
-    <string name="last_fm_send_likes_description">Mylėti/Nemylėti dainas Last.fm kai jos yra susietos su Mėgiamomis/Nemėgiamomis Meld</string>
     <string name="logging_in">Prisijungiama…</string>
     <string name="scrobbling_configuration">Skroblavimo konfigūracija</string>
-    <string name="scrobble_min_track_duration">Skrobluoti dainas ilgesnes nei</string>
-    <string name="scrobble_delay_percent">Skroblavimo vėlinimas procentais</string>
-    <string name="scrobble_delay_minutes">Skroblavimo vėlinimas minutėmis</string>
     <string name="hide_youtube_shorts">Slėpti YouTube Shorts</string>
     <string name="lyrics_romanize_macedonian">Romanizuoti makedonų kalbos tekstus</string>
     <string name="lyrics_romanization_cyrillic">Kirilica</string>
@@ -383,9 +375,7 @@
         <item quantity="many">%d Profilių</item>
         <item quantity="other">%d Profilių</item>
     </plurals>
-    <string name="listening_to_metrolist">Klausomasi „Meld”</string>
-    <string name="discord_use_details">Naudoti detalesnę informaciją, vietoje būsenos</string>
-    <string name="discord_use_details_description">Aiškiai matyti dainos pavadinimą, o ne atlikėjo vardą</string>
+    <string name="listening_to_metrolist">Klausomasi „Aura”</string>
     <string name="crossfade_beta_title">Beta funkcija</string>
     <string name="crossfade_beta_message">Perėjimai yra nauja funkcija ir gali veikti netinkamai. Esant nesklandumams, prašome apie juos pranešti.\n\nDėl techninių apribojimų ši funkcija išjungia garso perkėlimą.</string>
     <string name="lyrics_romanize_hindi">Romanizuoti hindi kalbos dainų tesktus</string>

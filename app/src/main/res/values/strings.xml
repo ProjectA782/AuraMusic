@@ -383,7 +383,6 @@
     <string name="translation_models">Translation Models</string>
     <string name="clear_translation_models">Clear translation models</string>
 
-    <string name="discord_information">Aura sets your Discord account\'s status over the Discord Gateway, which may be considered a violation of Discord\'s TOS. There are no known cases of user accounts being suspended for this reason. Use at your own risk.\n\nAura only extracts your token; everything else is stored locally.</string>
 
     <string name="filter_spotify">Spotify</string>
     <string name="show_recognize_music_button">Show music recognition button</string>

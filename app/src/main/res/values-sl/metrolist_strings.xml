@@ -166,15 +166,8 @@
     <string name="integrations">Integracije</string>
     <string name="username">Uporabniško ime</string>
     <string name="password">Geslo</string>
-    <string name="lastfm_integration">Integracija z Last.fm</string>
     <string name="enable_scrobbling">Omogoči beleženje</string>
-    <string name="lastfm_now_playing">Pošlji status trenutnega predvajanja</string>
     <string name="scrobbling_configuration">Nastavitve beleženja</string>
-    <string name="scrobble_min_track_duration">Beleži pesmi, daljše od</string>
-    <string name="scrobble_delay_percent">Odstotek zakasnitve beleženja</string>
-    <string name="scrobble_delay_minutes">Zakasnitev beleženja v minutah</string>
-    <string name="last_fm_send_likes">Pošlji všečke/nevšečke</string>
-    <string name="last_fm_send_likes_description">Dodaj/odstrani pesmi med priljubljenimi na Last.fm, ko jih všečkaš/odvšečkaš v Meldu</string>
     <string name="edit_playlist_cover_note">Opomba: Vaš račun mora biti povezan s telefonsko številko in preverjen na YouTube Music, da lahko spremenite naslovnico seznama predvajanja.</string>
     <string name="settings_section_player_content">Predvajalnik in vsebina</string>
     <string name="settings_section_storage">Shramba in podatki</string>
@@ -281,8 +274,6 @@
     <string name="restore">Obnovi</string>
     <string name="lyrics_romanize_japanese">Romaniziraj japonska besedila</string>
     <string name="lyrics_romanize_korean">Romaniziraj korejska besedila</string>
-    <string name="discord_use_details">Uporabi podrobnosti namesto statusa</string>
-    <string name="discord_use_details_description">Izpostavi naslov pesmi namesto izvajalca</string>
     <string name="lyrics_romanize_chinese">Romaniziraj kitajska besedila</string>
     <string name="lyrics_romanization_cyrillic">Cirilica</string>
     <string name="lyrics_romanize_russian">Romaniziraj ruska besedila</string>
@@ -301,5 +292,5 @@
     <string name="slide">Drsenje</string>
     <string name="karaoke">Karaoke</string>
     <string name="apple_music_style">Apple Music</string>
-    <string name="listening_to_metrolist">Poslušaš Meld</string>
+    <string name="listening_to_metrolist">Poslušaš Aura</string>
 </resources>

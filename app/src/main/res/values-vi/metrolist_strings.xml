@@ -169,7 +169,6 @@
     <string name="integrations">Tích hợp tiện ích</string>
     <string name="username">Tên người dùng</string>
     <string name="password">Mật khẩu</string>
-    <string name="lastfm_integration">Tích hợp Last.fm</string>
     <string name="about_artist">Giới thiệu nghệ sĩ</string>
     <string name="show_more">Hiển thị thêm</string>
     <string name="show_less">Hiện ít hơn</string>
@@ -177,7 +176,7 @@
     <string name="show_artist_description">Hiển thị mô tả nghệ sĩ</string>
     <string name="show_artist_subscriber_count">Hiện số lượng người đăng ký</string>
     <string name="show_artist_monthly_listeners">Hiển thị số lượt nghe hằng tháng</string>
-    <string name="wrapped_logo_content_description">Meld Logo</string>
+    <string name="wrapped_logo_content_description">Aura Logo</string>
     <string name="wrapped_year">2025</string>
     <string name="listen_together_join_room">Tham gia phòng</string>
     <string name="listen_together_create_room_desc">Tạo phòng và chia sẻ mã với bạn bè của bạn</string>
@@ -201,7 +200,7 @@
     <string name="listen_together_use_custom_server">Sử dụng máy chủ tùy chỉnh</string>
     <string name="album_art">Cài đặt widget</string>
     <string name="no_song_playing">Không có bài hát đang phát</string>
-    <string name="tap_to_open">Chạm để mở Meld</string>
+    <string name="tap_to_open">Chạm để mở Aura</string>
     <string name="previous">Bài trước</string>
     <string name="play_pause">Phát/Tạm dừng</string>
     <string name="next">Bài tiếp</string>
@@ -273,7 +272,7 @@
     <string name="crash_description">Đã xảy ra lỗi không mong muốn. Vui lòng chia sẻ báo cáo sự cố để giúp chúng tôi khắc phục lỗi</string>
     <string name="crash_share_logs">Chia sẻ nhật ký</string>
     <string name="crash_share_title">Chia sẻ báo cáo sự cố</string>
-    <string name="crash_report_subject">Báo cáo sự cố Meld</string>
+    <string name="crash_report_subject">Báo cáo sự cố Aura</string>
     <string name="crash_close">Đóng</string>
     <string name="crash_no_log">Không có nhật ký sự cố</string>
     <string name="palette_crimson">Đỏ thẫm</string>
@@ -310,7 +309,6 @@
     <string name="remember_shuffle_and_repeat_desc">Ghi nhớ các cài đặt phát xáo trộn và phát lại khi khởi động lại ứng dụng</string>
     <string name="pause_music_when_media_is_muted">Tạm dừng nhạc khi tắt tiếng media</string>
     <string name="keep_screen_on_when_player_is_expanded">Giữ màn hình bật khi mở trình phát</string>
-    <string name="last_fm_send_likes_description">Tự động Yêu thích hoặc Bỏ yêu thích bài hát trên Last.fm khi bạn thích hoặc bỏ thích chúng trên Meld</string>
     <string name="logging_in">Đang đăng nhập…</string>
     <string name="hide_video_songs">Ẩn bài hát video</string>
     <string name="details_desc">Xem thông tin chi tiết của bài hát</string>
@@ -364,7 +362,6 @@
     <string name="lyrics_provider_priority_desc">Kéo để xắp xếp lại nhà cung cấp theo ý muốn. Vị trí càng cao -&gt; Ưu tiên càng cao</string>
     <string name="changelog">Lịch sử cập nhật</string>
     <string name="changelog_empty">Không có lịch sử cập nhật có sẵn</string>
-    <string name="github_releases_url">https://github.com/FrancescoGrazioso/Meld/releases</string>
     <string name="list_bullet">•</string>
     <string name="view_on_github">Xem trong GitHub</string>
     <string name="current_version">Phiên bản hiện tại</string>
@@ -388,12 +385,7 @@
     <string name="audio_offload_disabled_by_crossfade">Đã bị vô hiệu hóa do tính năng chuyển bài mượt đang hoạt động</string>
     <string name="lyrics_romanize_as_main">Hiện lời bài hát La-tinh hóa là chính</string>
     <string name="enable_scrobbling">Kích hoạt scrobbling</string>
-    <string name="lastfm_now_playing">Gửi trạng thái Đang phát</string>
-    <string name="last_fm_send_likes">Đồng bộ bài hát Yêu thích và Không yêu thích</string>
     <string name="scrobbling_configuration">Cấu hình Scrobble</string>
-    <string name="scrobble_min_track_duration">Scrobble các bài hát dài hơn (giây)</string>
-    <string name="scrobble_delay_percent">Độ trễ scrobble (phần trăm)</string>
-    <string name="scrobble_delay_minutes">Phút chờ Scrobble (phút)</string>
     <string name="hide_youtube_shorts">Ẩn YouTube Shorts</string>
     <string name="start_radio_desc">Bắt đầu phát radio dựa trên mục này</string>
     <string name="mini_player">Trình phát mini</string>
@@ -411,7 +403,6 @@
     <string name="wrapped_album_listening_time_minutes">%d phút</string>
     <string name="wrapped_no_data">Không có dữ liệu khả dụng</string>
     <string name="credits_license_desc">Phần mềm miễn phí, mã nguồn mở. Bạn có thể sử dụng, học hỏi, chia sẻ và cải thiện nó😉</string>
-    <string name="credits_discord">Máy chủ Discord</string>
     <string name="credits_view_repo">Xem kho lưu trữ</string>
     <string name="buy_mo_a_coffee">Ủng hộ tôi một ly cà phê!</string>
     <string name="community_and_info">Cộng đồng &amp; Thông tin</string>
@@ -555,7 +546,7 @@
     <string name="error_podcast_unsubscribe">Không thể hủy đăng ký podcast</string>
     <string name="view_channel">Xem kênh</string>
     <string name="not_playing">Không có bài hát đang phát</string>
-    <string name="tap_to_play">Ấn để mở Meld</string>
+    <string name="tap_to_play">Ấn để mở Aura</string>
     <string name="widget_music_player">Máy phát Nhạc</string>
     <string name="widget_turntable">Bàn xoay</string>
     <string name="widget_recognizer_name">Nhận dạng âm nhạc</string>
@@ -664,7 +655,7 @@
     <string name="clear_recognition_history_confirm">Bạn có chắc chắn muốn xóa toàn bộ lịch sử nhận dạng nhạc không?</string>
     <string name="delete_from_history">Xoá khỏi lịch sử</string>
     <string name="re_listen">Nghe lại</string>
-    <string name="play_on_app">Phát trên Meld</string>
+    <string name="play_on_app">Phát trên Aura</string>
     <string name="qs_tile_music_recognizer">Nhận dạng bài hát</string>
     <string name="recognition_notification_channel_name">Nhận dạng bài hát</string>
     <string name="recognition_notification_channel_desc">Hiển thị thông báo trong khi nhận dạng bài hát từ menu cài đặt nhanh</string>
@@ -672,7 +663,7 @@
     <string name="recognition_notification_processing">Đang xác định…</string>
     <string name="recognition_notification_no_match">Không tìm thấy kết quả phù hợp</string>
     <string name="recognition_notification_failed">Không nhận dạng được</string>
-    <string name="listen_on_metrolist">Nghe trên Meld</string>
+    <string name="listen_on_metrolist">Nghe trên Aura</string>
     <string name="map_csv_columns">Ánh xạ các cột CSV</string>
     <string name="first_row_is_header">Dòng đầu tiên là tiêu đề</string>
     <string name="artist_name_column">Cột Tên nghệ sĩ</string>
@@ -683,23 +674,6 @@
     <string name="importing_playlist">Đang nhập Danh sách phát…</string>
     <string name="recently_converted">Mới chuyển đổi</string>
     <string name="column_label">Cột %d</string>
-    <string name="discord_status">Trạng thái</string>
-    <string name="discord_status_online">Trực tuyến</string>
-    <string name="discord_status_idle">Không hoạt động</string>
-    <string name="discord_status_dnd">Không làm phiền</string>
-    <string name="discord_buttons">Nút</string>
-    <string name="discord_button_1">Nút 1</string>
-    <string name="discord_button_2">Nút 2</string>
-    <string name="discord_information_warning">Metrolist sử dụng API OAuth2 công khai và Gateway của Discord để chia sẻ nội dung bạn đang nghe. Quá trình ủy quyền diễn ra thông qua một phiên trình duyệt cục bộ và tự động đóng sau khi nhận mã — không có dữ liệu nào được gửi đến máy chủ bên thứ ba. Mã token của bạn được lưu trữ trên thiết bị này trong phần cài đặt bảo mật mã hóa và không bao giờ được chia sẻ. Metrolist kết nối trực tiếp đến wss://gateway.discord.gg để cập nhật hoạt động của bạn, và chỉ yêu cầu các quyền tối thiểu cần thiết (sdk.social_layer_presence).</string>
-    <string name="discord_activity_type">Loại hoạt động</string>
-    <string name="discord_activity_playing">Đang phát</string>
-    <string name="discord_activity_listening">Đang nghe</string>
-    <string name="discord_activity_watching">Đang xem</string>
-    <string name="discord_rpc_preview">Xem trước Rich Presence</string>
-    <string name="discord_connect_description">Đăng nhập bằng Discord để chia sẻ những gì bạn đang nghe</string>
-    <string name="discord_activity_name">Tên hoạt động</string>
-    <string name="discord_advanced_mode">Chế độ nâng cao</string>
-    <string name="discord_advanced_mode_description">Hiển thị thêm các tùy chọn tùy chỉnh Rich Presence</string>
     <string name="pin_to_speed_dial">Ghim vào kệ Phát nhanh</string>
     <string name="unpin_from_speed_dial">Bỏ ghim khỏi kệ Phát nhanh</string>
     <string name="randomize_home_order">Xáo trộn thứ tự trên màn hình chính</string>
@@ -769,8 +743,6 @@
     <string name="wizard_multiple_variants">Có nhiều biến thể khác nhau đang khả dụng</string>
     <string name="wizard_select_eq_profiles">Chọn hồ sơ EQ cho %s</string>
     <string name="wizard_save_profiles">Lưu hồ sơ</string>
-    <string name="discord_activity_competing">Cạnh tranh</string>
-    <string name="discord_presence">Hiện diện</string>
     <string name="loudness_level">Mức âm lượng</string>
     <string name="loudness_level_aggressive">Mạnh (-7 dB)</string>
     <string name="loudness_level_loud">Lớn (-11 dB)</string>
@@ -789,22 +761,6 @@
     <string name="audio_track_playback_params_description">Sử dụng AudioTrack của Android để thay đổi tốc độ/cao độ thay vì xử lý bằng phần mềm. Hoạt động ổn định hơn khi điều chỉnh cao độ ở mức cực hạn</string>
     <string name="auto_radio_queue">Tự động thêm vào hàng chờ</string>
     <string name="and">và</string>
-    <string name="discord_status_connected">Đã kết nối</string>
-    <string name="discord_status_authorizing">Đang ủy quyền…</string>
-    <string name="discord_status_authorized">Đã ủy quyền</string>
-    <string name="discord_status_not_initialized">Chưa kích hoạt</string>
-    <string name="discord_error_loopback_timeout">Discord không phản hồi. Vui lòng thử lại.</string>
-    <string name="discord_error_loopback_unbound">Không thể mở cổng phản hồi nội bộ. Vui lòng giải phóng một cổng và thử lại.</string>
-    <string name="discord_error_no_browser">Không tìm thấy trình duyệt nào để hoàn tất ủy quyền Discord.</string>
-    <string name="discord_error_token_refresh_failed">Phiên đăng nhập Discord đã hết hạn. Vui lòng kết nối lại.</string>
-    <string name="discord_error_invalid_scope">Discord đã từ chối kết nối. Vui lòng kết nối lại và cấp quyền truy cập theo yêu cầu.</string>
-    <string name="discord_error_banner_title">Lỗi Discord</string>
-    <string name="discord_state">Trạng thái</string>
-    <string name="discord_details">Chi tiết</string>
-    <string name="discord_enable_button_1">Hiển thị nút 1</string>
-    <string name="discord_enable_button_2">Hiển thị nút 2</string>
-    <string name="discord_button_label">Nhãn</string>
-    <string name="discord_button_url">URL</string>
     <string name="restore_database_incompatible">Không thể khôi phục bản sao lưu: phiên bản cơ sở dữ liệu không tương thích. Dữ liệu hiện tại của bạn đã được giữ nguyên.</string>
     <string name="stream_client">Ứng dụng phát trực tuyến</string>
     <string name="format_player_hash">Mã người dùng</string>
@@ -831,8 +787,8 @@
     <string name="enable_dynamic_icon">Biểu tượng theo chủ đề</string>
     <string name="enable_dynamic_icon_desc">Sử dụng biểu tượng theo chủ đề. Khi tắt, biểu tượng sẽ sử dụng màu đơn sắc.</string>
     <string name="playlist_unavailable">Không tìm thấy danh sách phát</string>
-    <string name="kmp_upgrade_title">Đã có phiên bản Metrolist KMP %s</string>
-    <string name="kmp_upgrade_warning">Ứng dụng Metrolist KMP vẫn đang trong quá trình phát triển. Bạn có thể gặp phải lỗi hoặc các tính năng chưa hoàn thiện.</string>
+    <string name="kmp_upgrade_title">Đã có phiên bản Aura KMP %s</string>
+    <string name="kmp_upgrade_warning">Ứng dụng Aura KMP vẫn đang trong quá trình phát triển. Bạn có thể gặp phải lỗi hoặc các tính năng chưa hoàn thiện.</string>
     <string name="kmp_upgrade_action">Thử KMP</string>
     <string name="kmp_upgrade_later">Để sau</string>
     <string name="android_auto_search_options">Tùy chọn tìm kiếm</string>
@@ -856,7 +812,7 @@
     <string name="ai_provider_inception_help">Truy cập https://platform.inceptionlabs.ai để lấy khóa API</string>
     <string name="enable_zemer">Bật nhà cung cấp lời bài hát Zemer</string>
     <string name="enable_zemer_desc">Lời bài hát cho âm nhạc Do Thái</string>
-    <string name="update_available_message">Meld %s đã sẵn sàng để tải xuống.</string>
+    <string name="update_available_message">Aura %s đã sẵn sàng để tải xuống.</string>
     <string name="update_action">Cập nhật</string>
     <string name="lyrics_romanize_japanese">La-tinh hóa lời bài hát tiếng Nhật</string>
     <string name="lyrics_romanize_korean">La-tinh hóa lời bài hát tiếng Hàn</string>
@@ -870,8 +826,6 @@
     <string name="line_by_line_option_desc">Ngôn ngữ Cyrillic sẽ được phát hiện theo từng dòng thay vì toàn bộ bài hát.</string>
     <string name="line_by_line_dialog_title">Bạn có chắc không?</string>
     <string name="line_by_line_dialog_desc">Đây là một tính năng thử nghiệm có thể thành công hoặc thất bại.\n\nTheo mặc định, ngôn ngữ được xác định dựa trên toàn bộ bài hát, nhưng khi bật tùy chọn này, ngôn ngữ sẽ được xác định theo từng dòng. Điều này cho phép các bài hát đa ngôn ngữ hoạt động NHƯNG ngôn ngữ có thể không phải lúc nào cũng chính xác (ví dụ: nếu lời bài hát tiếng Ukraine không chứa bất kỳ chữ cái nào đặc trưng của tiếng Ukraine, nó có thể được chuyển sang tiếng Nga).\n\nNếu bạn không gặp sự cố, bạn nên tắt tùy chọn này.</string>
-    <string name="discord_use_details">Dùng chi tiết thay vì trạng thái</string>
-    <string name="discord_use_details_description">Hiện tên bài hát chính thay vì tên nghệ sĩ</string>
     <string name="lyrics_romanize_chinese">La-tinh hóa lời bài hát tiếng Trung</string>
     <string name="lyrics_romanize_macedonian">Phiên âm chữ Ma-xê-đô-ni-a (Macedonia) sang chữ Latinh</string>
     <string name="fade">Mờ dần</string>
@@ -894,7 +848,7 @@
     </plurals>
     <string name="alarm_playlist_helper">Chọn những danh sách báo thức phát</string>
     <string name="alarm_next_trigger">Kích hoạt tiếp theo</string>
-    <string name="listening_to_metrolist">Đang nghe Meld</string>
+    <string name="listening_to_metrolist">Đang nghe Aura</string>
     <string name="copy_all_lyrics">Sao chép lời bài hát</string>
     <string name="ai_error_unexpected">Kết quả dịch bất ngờ</string>
     <string name="ai_system_prompt_desc">Hướng dẫn tùy chỉnh đã đuợc gửi đến mô hình AI. Để trống nếu muốn sử dụng lời nhắc mặc định</string>

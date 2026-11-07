@@ -1,108 +1,54 @@
 # Aura Music
 
-A dedicated Spotify client engineered for Android TV and Google TV, built with Kotlin and
-Jetpack Compose. Sign in with your own Spotify account and the app drives its home shelf,
-search, radio-style queues, and library from your taste profile — on the big screen, with a
-D-pad.
+A dedicated Spotify client engineered specifically for Android TV
 
-**Current release: 1.0** (versionCode 1). `minSdk 26`, `targetSdk 36`.
+## What is Aura Music?
 
-> Aura Music is an independent project. It is not affiliated with, endorsed by, or sponsored by
-> Spotify. The Spotify name, marks and content are the property of Spotify AB, and every request
-> the app makes is made with *your* account and under *your* responsibility. Playback features
-> depend on Spotify's own service terms and on your subscription tier.
+Aura Music is a dedicated Spotify client built from the ground up for Android TV. Inspired by the frictionless authentication of Meld, Aura takes a completely different path: it is a Spotify-exclusive client reworked to bring world-class audio personalization directly to the big screen, wrapped in a striking, TV-first Material You interface.
 
-## What it does
+## Why Aura Music?
 
-- **Spotify at the core.** Search, home recommendations, new releases, streaming audio and
-  library syncing come from the native Spotify ecosystem, with a licensed fallback for the few
-  tracks Spotify cannot serve.
-- **Android TV optimized.** Built completely around D-pad navigation, with vector launcher and
-  interface icons, an animated splash screen, and an immersive full-screen playback view.
-- **Material You aesthetics.** Deep tonal palettes, rounded geometry and Material-style vector
-  icons.
-- **Zero setup friction.** Log in with your Spotify account inside the app — no developer
-  dashboard, no client IDs, no configuration.
-- **Smart queue generation.** Continuous radio-like queues built from your taste profile,
-  cross-referencing top tracks, genre similarity and listening history.
-- **Seamless library sync.** Saved playlists, liked songs and saved albums without leaving
-  the couch.
+- **Designed for the Living Room** — Built exclusively around D-pad navigation with a custom full-screen interactive playback view designed for Google TV.
+- **Pure Spotify Experience** — No hybrid catalogs or platform mixing in what you browse. Every search result, home screen recommendation, playlist and saved album is natively driven by the Spotify ecosystem.
+- **No Setup Friction** — Log in with your Spotify account directly in the app. No developer dashboards, no Client IDs, and no complex configurations required.
+- **Modern Aesthetics** — Ditching the standard TV UI for fluid Material You design principles, featuring deep tonal color palettes and dynamic scaling.
 
-## Getting a build onto a TV
+## Features
 
-### Requirements
+### 📺 Android TV Optimized
 
-| | |
-|---|---|
-| JDK | 21 |
-| Android SDK | platform 36, build-tools matching `app/build.gradle.kts` |
-| Device | Android TV / Google TV on API 26 or newer |
+- **Native D-Pad Navigation**: Fluid, snag-free remote navigation utilizing custom side navigation rails.
+- **Immersive Playback**: An interactive, full-screen playback view that brings album art and metadata to life on large displays.
+- **Custom Assets**: Custom adaptive launcher icons generated for every screen density, a TV banner asset, and smooth splash screen animations designed specifically for Google TV.
 
-Clone, then point Gradle at your SDK:
+### 🎨 Material You Design
 
-```bash
-git clone <this repo> aura-music && cd aura-music
-cp local.properties.sample local.properties     # edit sdk.dir
-```
+- **Tonal Palettes**: UI colors dynamically adapt using deep tonal palettes that feel modern and cinematic.
+- **Fluid Geometry**: Softened, rounded geometry and variable Material Symbols replace rigid, legacy TV design patterns.
 
-### Build
+### 🎧 Core Spotify Integration
 
-```bash
-./gradlew :app:assembleFossRelease      # unsigned-check build; see Signing below
-./gradlew :app:assembleFossDebug        # debug package id, no signing config needed
-```
+- **Spotify as the Sole Source**: Search results, home screen tracks, top artists, and new releases are populated entirely from your Spotify profile.
+- **Smart Queue Generation**: A custom built-in recommendation engine builds continuous, radio-like queues based on your Spotify taste profile, cross-referencing top tracks, genre similarity, and your listening history.
+- **Seamless Library Sync**: Instantly access your saved Spotify playlists, liked songs, and saved albums without leaving the couch.
+- **Profile Caching**: A hybrid data strategy caches your profile locally for instant home screen loading on app restart, bypassing aggressive rate limits.
 
-Output lands in `app/build/outputs/apk/<flavour>/<type>/`.
+## Download and Installation
 
-Three product flavours share the same sources:
+1. Go to the [Releases](../../releases) page.
+2. Download the latest `AuraMusic.apk` file.
+3. Transfer the APK to your Android TV or Google TV device (using a USB drive or an app like Send Files to TV).
+4. Sideload the installation using a file manager on your TV. (Note: You may need to enable "Install from unknown sources" in your Android TV settings).
 
-| Flavour | Package | Notes |
-|---|---|---|
-| `foss` | `com.aura.music` | No proprietary Google dependencies. This is what ships. |
-| `gms` | — | Google Play Services integrations. |
-| `izzy` | — | IzzyOnDroid-style distribution variant. |
+## How the Integration Works Under the Hood
 
-Debug builds install side by side as `com.aura.music.debug`.
+Aura connects to your Spotify account through a built-in WebView login, meaning you don't need a premium account or a developer API key to get started.
 
-### Signing a release
-
-`assembleFossRelease` reads `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`
-and `RELEASE_KEY_PASSWORD` from `local.properties` (or the equivalent environment variables) and
-falls back to `app/keystore/release.keystore`. That directory is Git-ignored on purpose: the
-private key and the ability to upgrade an installed v1.0 are the same thing, and once a key is in
-Git history it cannot be taken out without rewriting the repository. Generate your own key for
-any fork.
-
-## Repository layout
-
-```
-app/src/main/kotlin/com/aura/music/
-  ui/aura/          the design-system primitives (hero card, shelf, rail row, pill, tokens)
-  ui/screens/       one package per destination: home, search, library, artist, settings…
-  spotify/          Spotify auth, web API and GraphQL clients
-  playback/         Media3 session, queue and source selection
-  db/  data/        Room entities and DataStore preferences
-innertube/          included-in-build client for the fallback audio source
-```
-
-The UI layer is deliberately composed from `ui/aura` primitives rather than Material's stock TV
-templates, so a change to the visual language lands in one file.
-
-## Development notes
-
-`AGENTS.md` at the repo root documents the working conventions for this codebase — where
-user-visible strings live, how the flavour matrix interacts with build commands, and what has
-already been measured on real hardware. Read it before changing anything.
+- **Authentication**: You log in with your regular Spotify credentials directly inside the app. Aura extracts the session cookies and generates access tokens using TOTP, keeping you logged in without manual token management.
+- **Data Layer**: Aura communicates with Spotify primarily through GraphQL endpoints (for playlists, liked songs, artist details, albums, new releases, and search) with REST API fallbacks for top tracks and top artists. This avoids the aggressive rate limits that affect standard REST endpoints.
+- **Queue Generation**: When you initiate playback, Aura's recommendation engine builds a queue by fetching top tracks from the song's artists, finding genre-similar artists from your taste profile, mixing in tracks from your personal top pool, and scoring candidates by affinity, recency, and genre overlap.
+- **Performance**: Your Spotify profile data (top tracks, top artists with images) is persisted locally in a database and served instantly on app restart. Background network refreshes only occur when the cache is stale, keeping the TV interface highly responsive even on lower-end smart TV hardware.
 
 ## License
 
-Aura Music is distributed under the **GNU General Public License v3.0 only**
-([`LICENSE`](LICENSE)).
-
-Aura Music is a reworking of the upstream **Metrolist** project. Most source files retain a
-per-file provenance header naming the upstream project and its GPL-3.0 licence; those headers are
-part of the licence chain and are not to be stripped. The visible product, its identity and its
-interface are Aura Music's own.
-
-Third-party trademarks, service names and catalog content belong to their respective owners and
-are used only to describe the services this app talks to.
+Aura Music is licensed under GPL-3.0-only. It is a reworking of the upstream **Metrolist** project, and the per-file provenance headers carried through this repository record that origin. They are part of the attribution for that work and are not to be stripped.

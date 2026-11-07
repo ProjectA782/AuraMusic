@@ -154,15 +154,9 @@
     <string name="integrations">Ενσωματώσεις</string>
     <string name="username">Όνομα χρήστη</string>
     <string name="password">Κωδικός πρόσβασης</string>
-    <string name="lastfm_integration">Ενσωμάτωση Last.fm</string>
     <string name="enable_scrobbling">Ενεργοποίηση scrobbling</string>
-    <string name="lastfm_now_playing">Αποστολή Τρέχοντος τραγουδιού</string>
     <string name="scrobbling_configuration">Ρύθμιση Scrobbling</string>
-    <string name="scrobble_min_track_duration">Σκρόμπλαρε τραγούδια μεγαλύτερα από</string>
-    <string name="scrobble_delay_percent">Ποσοστό καθυστέρησης σκρομπλαρίσματος</string>
-    <string name="scrobble_delay_minutes">Λεπτά καθυστέρησης καταγραφής ως «scrobbled»</string>
     <string name="romanize_current_track">Λατινοποίηση (transliteration) τρέχοντος κομματιού</string>
-    <string name="last_fm_send_likes">Αποστολή Likes/Unlikes</string>
     <string name="about_artist">Πληροφορίες καλλιτέχνη</string>
     <string name="show_more">Εμφάνιση περισσότερων</string>
     <string name="show_less">Εμφάνιση λιγότερων</string>
@@ -232,7 +226,7 @@
     <string name="wrapped_intro_title">MELD</string>
     <string name="wrapped_intro_subtitle">ήρθε η ώρα να δείτε τι έχετε ακούσει</string>
     <string name="wrapped_intro_button">Πάμε!</string>
-    <string name="wrapped_logo_content_description">Λογότυπο Meld</string>
+    <string name="wrapped_logo_content_description">Λογότυπο Aura</string>
     <string name="wrapped_year">2025</string>
     <string name="wrapped_ready_subtitle">Ήρθε η ώρα να δείτε τι λατρέψατε φέτος.</string>
     <string name="wrapped_special_thanks">Ιδιαίτερες ευχαριστίες στον MO Agamy για τη δημιουργία του Metrolist</string>
@@ -258,7 +252,7 @@
     <string name="open">Άνοιγμα</string>
     <string name="error_playback_failed">Η αναπαραγωγή απέτυχε</string>
     <string name="no_song_playing">Δεν παίζει κανένα τραγούδι</string>
-    <string name="tap_to_open">Πατήστε για να ανοίξετε το Meld</string>
+    <string name="tap_to_open">Πατήστε για να ανοίξετε το Aura</string>
     <string name="previous">Προηγούμενο</string>
     <string name="play_pause">Αναπαραγωγή/Παύση</string>
     <string name="next">Επόμενο</string>
@@ -266,7 +260,6 @@
     <string name="widget_description">Widget αναπαραγωγής μουσικής με χειριστήρια αναπαραγωγής</string>
     <string name="turntable_widget_description">Γρήγορη πρόσβαση στο πιο πρόσφατο κομμάτι που ακούσατε</string>
     <string name="keep_screen_on_when_player_is_expanded">Διατήρηση της οθόνης ενεργοποιημένης όταν το πρόγραμμα αναπαραγωγής έχει επεκταθεί</string>
-    <string name="last_fm_send_likes_description">Να γίνονται τα τραγούδια Love/Unlove όταν γίνεται Like/Unlike στο Meld</string>
     <string name="play_next_desc">Προσθήκη στην κορυφή της σειράς αναπαραγωγής</string>
     <string name="add_to_queue_desc">Προσθήκη στο τέλος της σειράς αναπαραγωγής</string>
     <string name="mini_player">Μίνι πρόγραμμα αναπαραγωγής</string>
@@ -300,8 +293,6 @@
     <string name="and">και</string>
     <string name="lyrics_romanize_japanese">Λατινοποίηση (transliteration) ιαπωνικών στίχων</string>
     <string name="lyrics_romanize_korean">Λατινοποίηση (transliteration) κορεατικών στίχων</string>
-    <string name="discord_use_details">Χρήση λεπτομερειών αντί πολιτείας</string>
-    <string name="discord_use_details_description">Προβολή τίτλου τραγουδιού με έμφαση αντί για ονόματα καλλιτεχνών</string>
     <string name="lyrics_romanization_cyrillic">Κυριλικά</string>
     <string name="lyrics_romanize_russian">Λατινοποίηση Ρωσικών στίχων</string>
     <string name="lyrics_romanize_ukrainian">Λατινοποίηση Ουκρανικών στίχων</string>
@@ -325,5 +316,5 @@
     <string name="fade">Σβήσιμο</string>
     <string name="glow">Λάμψη</string>
     <string name="slide">Ολίσθηση</string>
-    <string name="listening_to_metrolist">Ακούτε το Meld</string>
+    <string name="listening_to_metrolist">Ακούτε το Aura</string>
 </resources>

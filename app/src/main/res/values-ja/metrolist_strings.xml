@@ -153,13 +153,8 @@
     <string name="integrations">外部のサービスと連携</string>
     <string name="username">ユーザー名</string>
     <string name="password">パスワード</string>
-    <string name="lastfm_integration">Last.fmと連携</string>
     <string name="enable_scrobbling">再生履歴を送信</string>
-    <string name="lastfm_now_playing">再生中の曲を反映</string>
     <string name="scrobbling_configuration">再生履歴の設定</string>
-    <string name="scrobble_min_track_duration">送信する最小の再生時間</string>
-    <string name="scrobble_delay_percent">送信する再生の割合</string>
-    <string name="scrobble_delay_minutes">送信までの時間</string>
     <string name="about_artist">概要</string>
     <string name="show_more">続きを読む</string>
     <string name="show_less">折りたたむ</string>
@@ -200,8 +195,6 @@
     <string name="pause_music_when_media_is_muted">ミュート時に再生を停止</string>
     <string name="keep_screen_on_when_player_is_expanded">プレーヤーを展開中は画面をオンに保つ</string>
     <string name="lyrics_offset">歌詞のタイミングを調整</string>
-    <string name="last_fm_send_likes">高評価/低評価を反映</string>
-    <string name="last_fm_send_likes_description">Meldで曲に高評価/低評価をつけると、Last.fmでもラブ/アンラブされます</string>
     <string name="edit_desc">タイトルやアーティスト名を編集します</string>
     <string name="start_radio_desc">この項目をもとにラジオを開始します</string>
     <string name="play_next_desc">キューの先頭に追加します</string>
@@ -275,7 +268,7 @@
     <string name="crash_title">アプリがクラッシュしました</string>
     <string name="crash_share_logs">クラッシュログを共有</string>
     <string name="crash_share_title">クラッシュレポートを共有</string>
-    <string name="crash_report_subject">Meldのクラッシュレポート</string>
+    <string name="crash_report_subject">Auraのクラッシュレポート</string>
     <string name="crash_close">閉じる</string>
     <string name="crash_no_log">クラッシュログがありません</string>
     <string name="palette_dynamic">ダイナミック</string>
@@ -346,7 +339,7 @@
     <string name="wrapped_total_songs_subtitle">ユニークな曲たち！</string>
     <string name="wrapped_intro_subtitle">今年聴いてきた曲を振り返る時が来ました…</string>
     <string name="wrapped_intro_button">さあ、始めよう！</string>
-    <string name="wrapped_logo_content_description">Meldロゴ</string>
+    <string name="wrapped_logo_content_description">Auraロゴ</string>
     <string name="wrapped_ready_title">あなたのWrappedが完成しました！</string>
     <string name="wrapped_ready_subtitle">今年あなたが夢中になった音楽を見てみましょう…</string>
     <string name="wrapped_thank_you">聴いてくれてありがとう！</string>
@@ -366,9 +359,9 @@
     <string name="failed_to_parse_proxy">プロキシURLを解析できません</string>
     <string name="error_playback_failed">再生に失敗しました</string>
     <string name="no_song_playing">再生中の曲はありません</string>
-    <string name="tap_to_open">タップしてMeldを開く</string>
+    <string name="tap_to_open">タップしてAuraを開く</string>
     <string name="previous">前へ</string>
-    <string name="tap_to_play">タップしてMeldを開く</string>
+    <string name="tap_to_play">タップしてAuraを開く</string>
     <string name="listen_together_you_are_host">あなたはホストです</string>
     <string name="listen_together_you_are_guest">あなたはゲストです</string>
     <string name="listen_together_join_requests">参加リクエスト</string>
@@ -450,7 +443,7 @@
     <string name="clear_recognition_history_confirm">認識履歴をすべて削除しますか？</string>
     <string name="delete_from_history">履歴から削除</string>
     <string name="re_listen">もう一度聴く</string>
-    <string name="play_on_app">Meldで再生</string>
+    <string name="play_on_app">Auraで再生</string>
     <string name="map_csv_columns">CSV列の対応設定</string>
     <string name="first_row_is_header">1行目をヘッダーとして扱う</string>
     <string name="artist_name_column">アーティスト名の列</string>
@@ -480,25 +473,6 @@
     <string name="ai_deepl_formality_default">デフォルト</string>
     <string name="ai_deepl_formality_more">より丁寧</string>
     <string name="ai_deepl_formality_less">よりカジュアル</string>
-    <string name="discord_status">ステータス</string>
-    <string name="discord_status_online">オンライン</string>
-    <string name="discord_status_idle">退席中</string>
-    <string name="discord_status_dnd">取り込み中</string>
-    <string name="discord_buttons">ボタン</string>
-    <string name="discord_button_1">ボタン 1</string>
-    <string name="discord_button_2">ボタン 2</string>
-    <string name="discord_information_warning">Metrolistは、あなたが聴いているものを共有するためにDiscordの公開OAuth2 APIおよびGateway APIを使用します。認可はローカルのブラウザセッションを通じて行われ、コードを取得した後はそのセッションは自動的に閉じられます — サードパーティのサーバーに何かが送信されることはありません。あなたのトークンはこのデバイス上の暗号化された設定に保存され、共有されることは決してありません。Metrolistはあなたのアクティビティを公開するためにwss://gateway.discord.ggに直接接続し、必要な最小限のスコープ（sdk.social_layer_presence）のみをリクエストします。</string>
-    <string name="discord_activity_type">アクティビティの種類</string>
-    <string name="discord_activity_playing">プレイ中</string>
-    <string name="discord_activity_listening">再生中</string>
-    <string name="discord_activity_watching">視聴中</string>
-    <string name="discord_activity_competing">大会に参加中</string>
-    <string name="discord_rpc_preview">再生状況のプレビュー</string>
-    <string name="discord_presence">プレゼンス</string>
-    <string name="discord_connect_description">Discordにログインして、再生中の内容を共有しよう</string>
-    <string name="discord_activity_name">アクティビティ名</string>
-    <string name="discord_advanced_mode">詳細設定</string>
-    <string name="discord_advanced_mode_description">プレースホルダーを使用してRich Presenceのすべてのフィールドをカスタマイズする</string>
     <string name="player_background_solid">単色</string>
     <string name="resume_on_bluetooth_connect">Bluetooth接続時に再生を再開</string>
     <string name="lyrics_romanize_as_main">ローマ字の歌詞をメインに表示</string>
@@ -528,7 +502,6 @@
     <string name="lyrics_provider_priority_desc">ドラッグして提供元を並び替えます。上にあるほど優先順位が高くなります</string>
     <string name="changelog">変更履歴</string>
     <string name="changelog_empty">変更履歴はありません</string>
-    <string name="github_releases_url">https://github.com/FrancescoGrazioso/Meld/releases</string>
     <string name="list_bullet">•</string>
     <string name="view_on_github">GitHubを開く</string>
     <string name="current_version">バージョン</string>
@@ -561,7 +534,6 @@
     <string name="credits_collaborators_section">共同開発者</string>
     <string name="credits_license_name">GNU一般公衆ライセンス v3.0</string>
     <string name="credits_license_desc">無料でオープンソースのソフトウェアで、使用、学習、共有、改良が可能です</string>
-    <string name="credits_discord">Discordサーバー</string>
     <string name="credits_telegram">Telegramチャンネル</string>
     <string name="credits_view_repo">リポジトリを表示</string>
     <string name="buy_mo_a_coffee">コーヒーをおごる</string>
@@ -705,7 +677,7 @@
     <string name="recognition_notification_processing">認識中…</string>
     <string name="recognition_notification_no_match">一致する曲が見つかりませんでした</string>
     <string name="recognition_notification_failed">認識に失敗しました</string>
-    <string name="listen_on_metrolist">Meldで聴く</string>
+    <string name="listen_on_metrolist">Auraで聴く</string>
     <string name="android_auto">Android Auto</string>
     <string name="android_auto_visible_sections">表示する項目</string>
     <string name="android_auto_reorder_hint">項目をタップするとオン/オフを切り替えられます。長押しで並び替えができます。先頭の項目がデフォルトで表示されます</string>
@@ -785,8 +757,8 @@
     <string name="widget_playlists_description">ミニプレイヤー操作付きのプレイリストショートカット</string>
     <string name="choose_something_below">以下から選択してください</string>
     <string name="and">そして</string>
-    <string name="kmp_upgrade_title">Metrolist KMP %s が利用可能です</string>
-    <string name="kmp_upgrade_warning">Metrolist KMP は早期アクセス中です。 機能が動作しない、不完全である、または予告なく変更となる可能性があります。</string>
+    <string name="kmp_upgrade_title">Aura KMP %s が利用可能です</string>
+    <string name="kmp_upgrade_warning">Aura KMP は早期アクセス中です。 機能が動作しない、不完全である、または予告なく変更となる可能性があります。</string>
     <string name="kmp_upgrade_action">KMP に更新する</string>
     <string name="kmp_upgrade_later">今はしない</string>
     <string name="audio_track_playback_params">ハードウェアオーディオ処理を用いる</string>
@@ -794,20 +766,6 @@
     <string name="error_job_cancelled">この動画は再生できません。もう一度試すか次の曲へスキップしてください。</string>
     <string name="enable_landscape_scaling">横画面で拡大</string>
     <string name="enable_landscape_scaling_desc">大画面向けに横画面状態時に UI を拡大します</string>
-    <string name="discord_status_connected">接続済み</string>
-    <string name="discord_status_authorizing">認証中…</string>
-    <string name="discord_status_authorized">認証済み</string>
-    <string name="discord_error_loopback_timeout">Discord が時間内に応答しませんでした。もう一度お試しください。</string>
-    <string name="discord_error_no_browser">Discord の認証を完了するためのブラウザが見つかりませんでした。</string>
-    <string name="discord_error_token_refresh_failed">Discord のセッションの期限が切れました。再接続してください。</string>
-    <string name="discord_error_invalid_scope">Discord が接続を拒否しました。もう一度接続し必須の権限を許可してください。</string>
-    <string name="discord_error_banner_title">Discord に関するエラー</string>
-    <string name="discord_state">状態</string>
-    <string name="discord_details">詳細</string>
-    <string name="discord_enable_button_1">ボタン 1 を表示</string>
-    <string name="discord_enable_button_2">ボタン 2 を表示</string>
-    <string name="discord_button_label">ラベル</string>
-    <string name="discord_button_url">URL</string>
     <string name="restore_database_incompatible">バックアップを復元できません: データベースのバージョンに互換性がありません。現在のデータは保存されています。</string>
     <string name="enable_dynamic_icon_desc">アプリのアイコンにダイナミックテーマカラーを使用します。無効になっている場合、アイコンは単色を使用します。</string>
     <string name="enable_dynamic_icon">ダイナミックアイコンカラー</string>
@@ -816,8 +774,6 @@
     <string name="auto_radio_queue">自動ラジオキュー</string>
     <string name="auto_radio_queue_desc">検索またはホームから曲を再生するときにラジオキューを自動作成する</string>
     <string name="playlist_unavailable">プレイリストは利用できません</string>
-    <string name="discord_status_not_initialized">初期化されていません</string>
-    <string name="discord_error_loopback_unbound">ローカルコールバックポートを開けませんでした。ポートを解放してから、もう一度お試しください。</string>
     <string name="android_auto_search_options">検索オプション</string>
     <string name="android_auto_search_local_songs_limit">曲の検索制限</string>
     <string name="android_auto_search_local_songs_limit_desc">検索結果に表示されるローカル曲の数を制限します。メモリクラッシュを防ぐため、無制限には設定しないことをおすすめします</string>
@@ -840,8 +796,6 @@
     <string name="stream_source_web_creator_desc">クリエーター向けウェブクライアント。</string>
     <string name="lyrics_romanize_japanese">日本語の歌詞にローマ字を追加</string>
     <string name="lyrics_romanize_korean">韓国語の歌詞にローマ字を追加</string>
-    <string name="discord_use_details">曲名を強調して表示</string>
-    <string name="discord_use_details_description">アーティスト名より曲名を目立つように表示します</string>
     <string name="lyrics_romanization_cyrillic">キリル文字</string>
     <string name="lyrics_romanize_russian">ロシア語の歌詞にローマ字を追加</string>
     <string name="lyrics_romanize_ukrainian">ウクライナ語の歌詞にローマ字を追加</string>
@@ -863,16 +817,11 @@
     <plurals name="profiles_count">
         <item quantity="other">%dプロファイル</item>
     </plurals>
-    <string name="listening_to_metrolist">Meldで再生中</string>
+    <string name="listening_to_metrolist">Auraで再生中</string>
     <string name="crossfade_beta_title">ベータ機能</string>
     <string name="crossfade_beta_message">曲のクロスフェードは新機能のため、不具合が発生する場合があります。問題があればご報告してください。\n\n技術的な制限により、クロスフェードを使用中はオフロード再生が無効になります。</string>
     <string name="ai_error_unexpected">翻訳結果が正しくありません</string>
     <string name="login_successful">ログインに成功しました！</string>
-    <string name="discord_button_text_variables">利用可能な変数：{song_name}, {artist_name}, {album_name}</string>
-    <string name="discord_playing_metrolist">Meldで再生中</string>
-    <string name="discord_watching_metrolist">Meldで視聴中</string>
-    <string name="discord_competing_metrolist">Meldで大会に参加中</string>
-    <string name="discord_activity_name_description">アクティビティのカスタム名（空欄の場合はデフォルトを使用）</string>
     <string name="lyrics_romanize_hindi">ヒンディー語の歌詞にローマ字を追加</string>
     <string name="lyrics_romanize_punjabi">パンジャブ語の歌詞にローマ字を追加</string>
     <string name="credits_website">ウェブサイト</string>
@@ -901,7 +850,6 @@
     <string name="login_settings">ログイン設定</string>
     <string name="general_settings">一般設定</string>
     <string name="google">Google</string>
-    <string name="discord">Discord</string>
     <string name="configure_app_language">アプリの言語を設定します</string>
     <string name="open_supported_links">デフォルトで開く</string>
     <string name="configure_supported_links">対応するリンクを設定します</string>
@@ -939,7 +887,7 @@
     <string name="wrapped_end_creating_playlist">作成中...</string>
     <string name="wrapped_end_playlist_saved">プレイリストを保存しました</string>
     <string name="listen_on_youtube_music">YouTube Musicで聴く</string>
-    <string name="visit_metrolist">Meldに移動</string>
+    <string name="visit_metrolist">Auraに移動</string>
     <string name="listen_together_leave_room">ルームから退出</string>
     <string name="enable_wavy_slider">波のシークバー</string>
     <string name="wrapped_end_create_playlist">Wrappedプレイリストを作成</string>
@@ -954,7 +902,7 @@
     <string name="reconnect">再接続</string>
     <string name="mini_player_outline">ミニプレーヤーの枠線</string>
     <string name="wrapped_artist_image_content_description">アーティスト画像</string>
-    <string name="wrapped_end_thanks">Meldで聴いてくれてありがとう！</string>
+    <string name="wrapped_end_thanks">Auraで聴いてくれてありがとう！</string>
     <string name="error_copied">エラー情報をクリップボードにコピーしました</string>
     <string name="error_copy_hint">エラー情報をコピーして、開発者が問題を特定できるようにします</string>
     <string name="queue_widget_description">再生キューを確認できる音楽プレーヤー</string>
@@ -965,8 +913,6 @@
     <string name="recognized_track">認識された曲</string>
     <string name="csv_import_failed">CSVファイルのインポートに失敗しました</string>
     <string name="csv_preview_failed">CSVファイルのプレビューに失敗しました</string>
-    <string name="discord_integration_settings">Discordと連携</string>
     <string name="button_text">ボタンのテキスト</string>
     <string name="button_visible">表示する</string>
-    <string name="discord_customization">カスタマイズ</string>
 </resources>

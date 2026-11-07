@@ -180,12 +180,6 @@
     *;
 }
 
-## Discord RPC JNI
--keep class com.aura.music.discord.DiscordRpcManager { *; }
--keepclassmembers class com.aura.music.discord.DiscordRpcManager {
-    native <methods>;
-}
-
 ## Kotlinx Serialization
 -keepattributes *Annotation*
 -keepclassmembers class com.aura.shazamkit.models.** {

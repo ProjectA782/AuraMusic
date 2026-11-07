@@ -32,7 +32,6 @@ import com.aura.innertube.YouTube
 import com.aura.innertube.models.ArtistConjunctions
 import com.aura.innertube.models.YouTubeLocale
 import com.aura.kugou.KuGou
-import com.aura.lastfm.LastFM
 import com.aura.spotify.Spotify
 import com.aura.spotify.SpotifyAuth
 import com.aura.music.BuildConfig
@@ -224,12 +223,6 @@ class App :
             KuGou.useTraditionalChinese = true
         }
 
-        // Initialize LastFM with API keys from BuildConfig (GitHub Secrets)
-        LastFM.initialize(
-            apiKey = BuildConfig.LASTFM_API_KEY.takeIf { it.isNotEmpty() } ?: "",
-            secret = BuildConfig.LASTFM_SECRET.takeIf { it.isNotEmpty() } ?: "",
-        )
-
         // Wire up Spotify API logging to Timber
         Spotify.logger = { level, message ->
             when (level) {
@@ -361,19 +354,6 @@ class App :
                     } catch (e: Exception) {
                         Timber.e(e, "Could not parse cookie. Clearing existing cookie.")
                         forgetAccount(this@App)
-                    }
-                }
-        }
-
-        applicationScope.launch(Dispatchers.IO) {
-            dataStore.data
-                .map { it[LastFMSessionKey] }
-                .distinctUntilChanged()
-                .collect { session ->
-                    try {
-                        LastFM.sessionKey = session
-                    } catch (e: Exception) {
-                        Timber.e("Error while loading last.fm session key. %s", e.message)
                     }
                 }
         }

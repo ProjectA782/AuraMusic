@@ -67,7 +67,7 @@ object OpenRouterStreamingService {
                         .apply {
                             if (apiKey.isNotBlank()) addHeader("Authorization", "Bearer ${apiKey.trim()}")
                         }.addHeader("Content-Type", "application/json")
-                        .addHeader("HTTP-Referer", "https://github.com/MetrolistGroup/Aura")
+                        .addHeader("HTTP-Referer", "https://github.com/ProjectA782/AuraMusic")
                         .addHeader("X-Title", "Aura")
                         .post(body.toString().toRequestBody(jsonMediaType))
                         .build()

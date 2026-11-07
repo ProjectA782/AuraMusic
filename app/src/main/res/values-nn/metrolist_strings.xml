@@ -186,16 +186,9 @@
     <string name="integrations">Hopflettingar</string>
     <string name="username">Nøytarnamn</string>
     <string name="password">Passord</string>
-    <string name="lastfm_integration">Hopfletting med Last.fm</string>
     <string name="enable_scrobbling">Slå på scrobbling</string>
-    <string name="lastfm_now_playing">Send «Spelar no»</string>
-    <string name="last_fm_send_likes">Send likar/mislikar</string>
-    <string name="last_fm_send_likes_description">Elska/avelska songar i Last.fm når dei vert lika/mislika i Meld</string>
     <string name="logging_in">Loggar inn…</string>
     <string name="scrobbling_configuration">Scrobblingsoppset</string>
-    <string name="scrobble_min_track_duration">Scrobbla songar lengre en</string>
-    <string name="scrobble_delay_percent">Skrobblingsforseinking i prosent</string>
-    <string name="scrobble_delay_minutes">Skrobblingsforseinking i minutt</string>
     <string name="hide_video_songs">Gøym videosongar</string>
     <string name="details_desc">Syn songopplysingar</string>
     <string name="edit_desc">Brigda tittel eller artist</string>
@@ -243,7 +236,7 @@
     <string name="wrapped_intro_title">MELD</string>
     <string name="wrapped_intro_subtitle">Det er på tide å sjå på kva du har høyrt på i år!</string>
     <string name="wrapped_intro_button">Set i gang!</string>
-    <string name="wrapped_logo_content_description">Meld-merket</string>
+    <string name="wrapped_logo_content_description">Aura-merket</string>
     <string name="wrapped_year">2026</string>
     <string name="wrapped_ready_title">DIN WRAPPED ER KLAR!</string>
     <string name="wrapped_ready_subtitle">På tide å sjå på kva du elska i år.</string>
@@ -276,15 +269,13 @@
     <string name="failed_to_parse_proxy">Mislukkast i å tolka mellomtenar-URL</string>
     <string name="album_art">Albumkunst</string>
     <string name="no_song_playing">Ingen song vert spela av</string>
-    <string name="tap_to_open">Trykk for å opna Meld</string>
+    <string name="tap_to_open">Trykk for å opna Aura</string>
     <string name="previous">Førre</string>
     <string name="play_pause">Spela av/Pausa</string>
     <string name="next">Neste</string>
     <string name="like">Lika</string>
     <string name="widget_description">Musikkavspelarwidget med avspelingskontrollar</string>
     <string name="turntable_widget_description">Snartilgang til songen du spela av nylegast</string>
-    <string name="discord_use_details">Nøyt detaljar i staden for ein tilstand</string>
-    <string name="discord_use_details_description">Syn songtittel fremst i staden for artistnamn</string>
     <string name="lyrics_romanization_cyrillic">Kyrillisk</string>
     <string name="lyrics_romanize_japanese">Romaniser japanske songtekster</string>
     <string name="lyrics_romanize_korean">Romaniser koreanske songtekster</string>
@@ -310,5 +301,5 @@
         <item quantity="one">%d profil</item>
         <item quantity="other">%d profilar</item>
     </plurals>
-    <string name="listening_to_metrolist">Høyrer på Meld</string>
+    <string name="listening_to_metrolist">Høyrer på Aura</string>
 </resources>
