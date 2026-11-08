@@ -58,6 +58,9 @@ object ApkUpdateInstaller {
             runCatching {
                 val file = targetFile(context)
                 file.parentFile?.mkdirs()
+                // The byte check at the end of a transfer is what makes a cached file trustworthy, so
+                // the same check here means a process restart never re-streams 27 MB it already has.
+                if (asset.size > 0 && file.length() == asset.size) return@runCatching file
                 file.delete()
 
                 client.prepareGet(asset.downloadUrl).execute { response ->
