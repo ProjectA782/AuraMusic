@@ -77,7 +77,7 @@ constructor(
     }
 
     private suspend fun loadReleases() {
-        val spotifyEnabled = context.dataStore.get(EnableSpotifyKey, false)
+        val spotifyEnabled = context.dataStore.get(EnableSpotifyKey, true)
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
 
         if (spotifyEnabled) {

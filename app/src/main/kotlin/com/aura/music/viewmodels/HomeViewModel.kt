@@ -1083,7 +1083,7 @@ class HomeViewModel @Inject constructor(
         // startup and update the cached SpeedDialItem when the thumbnail URL changed.
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val enabled = context.dataStore.get(EnableSpotifyKey, false)
+                val enabled = context.dataStore.get(EnableSpotifyKey, true)
                 val token = context.dataStore.get(SpotifyAccessTokenKey, "")
                 if (!enabled || token.isEmpty()) return@launch
                 val pinned = database.speedDialDao.getAll().first()

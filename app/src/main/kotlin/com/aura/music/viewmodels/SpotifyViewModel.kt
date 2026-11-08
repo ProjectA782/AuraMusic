@@ -68,7 +68,7 @@ constructor(
 
     val isSpotifyActive = context.dataStore.data
         .map {
-            val enabled = it[EnableSpotifyKey] ?: false
+            val enabled = it[EnableSpotifyKey] ?: true
             val hasToken = (it[SpotifyAccessTokenKey] ?: "").isNotEmpty()
             val active = enabled && hasToken
             Timber.d("SpotifyVM: isSpotifyActive=$active (enabled=$enabled, hasToken=$hasToken)")

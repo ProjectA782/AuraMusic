@@ -61,9 +61,10 @@ android {
         // Both builds share this number, so a reinstall within one release still replaces in place.
         // What the updater compares is versionName, but Android will not overwrite an installed
         // package with a different APK of the same versionCode, so every published release moves
-        // this number as well: 1 was v1.0.0 and v1.0.1, 2 is v1.0.2, 3 is v1.0.3, 4 is v1.0.4.
-        versionCode = 4
-        versionName = versionNameOverride ?: "1.0.4"
+        // this number as well: 1 was v1.0.0 and v1.0.1, 2 is v1.0.2, 3 is v1.0.3, 4 is v1.0.4,
+        // 5 is v1.0.5.
+        versionCode = 5
+        versionName = versionNameOverride ?: "1.0.5"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         buildCommit?.let { versionName = "$baseVersionName+$it" }
