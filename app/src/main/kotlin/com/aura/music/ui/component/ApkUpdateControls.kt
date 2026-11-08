@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.aura.music.R
 import com.aura.music.utils.ApkUpdateInstaller
 import com.aura.music.utils.ReleaseAsset
+import com.aura.music.utils.Updater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -80,9 +81,12 @@ class ApkUpdateState internal constructor(
      * Hand the matched asset over. A new release must not inherit the previous release's stage: a
      * Ready button would install an APK that is no longer the newest thing published, so the stale
      * file goes with the stage.
+     *
+     * A null is not a new release, it is this screen failing to name one. Clearing the handle there
+     * left the button reading "Download update" with nothing behind it.
      */
     fun prepare(asset: ReleaseAsset?) {
-        if (asset?.downloadUrl == pending?.downloadUrl) return
+        if (asset == null || asset.downloadUrl == pending?.downloadUrl) return
         if (downloaded != null) {
             ApkUpdateInstaller.deleteDownloaded(context)
             downloaded = null
@@ -102,12 +106,17 @@ class ApkUpdateState internal constructor(
     }
 
     private fun download() {
+        // The button can outlive its handle: a state object whose check finished in another screen,
+        // or a process restart that kept the release cache but not the asset. Answer from the
+        // release this process already has before telling the user there is nothing to download.
         val asset =
             pending
+                ?: Updater.getCachedLatestRelease()?.let(Updater::getAssetForCurrentVariant)
                 ?: run {
                     stage = ApkUpdateStage.Failed(context.getString(R.string.update_asset_missing))
                     return
                 }
+        pending = asset
         scope.launch {
             stage = ApkUpdateStage.Downloading(0, asset.size)
             ApkUpdateInstaller
