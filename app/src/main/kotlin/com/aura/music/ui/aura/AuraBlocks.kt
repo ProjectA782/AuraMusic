@@ -396,6 +396,7 @@ fun AuraPillButton(
     modifier: Modifier = Modifier,
     @DrawableRes icon: Int? = null,
     filled: Boolean = false,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -404,7 +405,15 @@ fun AuraPillButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.apx()),
         modifier = modifier
-            .auraFocused(corner = FullRound, fill = false, onFocusChanged = { focused = it })
+            .then(focusRequester?.let { Modifier.focusRequester(it).auraTrackRequester(it) } ?: Modifier)
+            // A caller-supplied anchor is the button's one focus target; claiming would mint a second
+            // and split the node, and the ring would sit on the half the selector never reaches.
+            .auraFocused(
+                corner = FullRound,
+                fill = false,
+                claim = focusRequester == null,
+                onFocusChanged = { focused = it },
+            )
             .then(
                 if (filled || focused) {
                     Modifier.background(AuraMock.Primary, shape)

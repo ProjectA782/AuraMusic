@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +32,8 @@ import com.aura.music.R
 import com.aura.music.utils.ApkUpdateInstaller
 import com.aura.music.utils.ReleaseAsset
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -158,11 +159,27 @@ class ApkUpdateState internal constructor(
     }
 }
 
+/**
+ * The one state machine, held outside the composition tree.
+ *
+ * A per-screen instance gave the update prompt and Settings ▸ Updater two different answers, and the
+ * Updater screen's died with the screen: a BACK partway through a 26 MB download cancelled it, and
+ * re-entering showed a button whose asset had never been handed over. The scope is the object's own
+ * because a composition scope is cancelled the moment its screen leaves.
+ */
+@Volatile
+private var sharedApkUpdateState: ApkUpdateState? = null
+
 @Composable
 fun rememberApkUpdateState(key: Any? = Unit): ApkUpdateState {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    return remember(context, scope, key) { ApkUpdateState(context, scope) }
+    return remember(context, key) {
+        sharedApkUpdateState
+            ?: ApkUpdateState(
+                context.applicationContext,
+                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+            ).also { sharedApkUpdateState = it }
+    }
 }
 
 /** The primary action, as a text button: label and behaviour both come from the stage. */

@@ -136,7 +136,15 @@ private fun AuraSettingsRow(
             .fillMaxWidth()
             .onSizeChanged { rowHeight = with(density) { it.height.toDp() } }
             .animateContentSize()
-            .auraFocused(corner = rowCorner, fill = false, onFocusChanged = { focused = it })
+            .auraFocused(
+                corner = rowCorner,
+                fill = false,
+                // A row with no action behind it is not focusable, so it must not offer itself to the
+                // rail: the honest anchor walk spends a request on every offer before it finds one that
+                // reports the selector back, and the Updater page leads with exactly such a row.
+                claim = item.onClick != null,
+                onFocusChanged = { focused = it },
+            )
             .clip(RoundedCornerShape(rowCorner))
             .background(
                 when {

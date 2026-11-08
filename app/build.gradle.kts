@@ -58,12 +58,12 @@ android {
         applicationId = applicationIdOverride ?: "com.aura.music"
         minSdk = 26
         targetSdk = 36
-        // v1 of the stable line, held across every release so install -r always replaces in place.
-        // The debug build shares this number, so the first debug reinstall over the installed 0.9.2
-        // (versionCode 28) needed adb's -d downgrade flag; after that both lines sit at 1.
-        // What moves between releases is versionName, which is what the updater compares.
-        versionCode = 1
-        versionName = versionNameOverride ?: "1.0.1"
+        // Both builds share this number, so a reinstall within one release still replaces in place.
+        // What the updater compares is versionName, but Android will not overwrite an installed
+        // package with a different APK of the same versionCode, so every published release moves
+        // this number as well: 1 was v1.0.0 and v1.0.1, 2 is v1.0.2.
+        versionCode = 2
+        versionName = versionNameOverride ?: "1.0.2"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         buildCommit?.let { versionName = "$baseVersionName+$it" }

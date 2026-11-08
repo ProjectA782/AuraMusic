@@ -26,6 +26,7 @@ import com.aura.music.ui.component.AuraSwitch
 import androidx.compose.material3.Text
 import com.aura.music.ui.component.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +51,7 @@ import com.aura.music.ui.component.Material3SettingsItem
 import com.aura.music.ui.component.auraSettingsGutter
 import com.aura.music.ui.component.rememberApkUpdateState
 import com.aura.music.ui.utils.backToMain
+import com.aura.music.utils.ReleaseInfo
 import com.aura.music.utils.Updater
 import com.aura.music.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +78,24 @@ fun UpdaterScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
+    fun showRelease(releaseInfo: ReleaseInfo, hasUpdate: Boolean) {
+        latestVersion = releaseInfo.versionName
+        updateAvailable = hasUpdate
+        changelogContent = releaseInfo.description
+        updateState.prepare(
+            if (hasUpdate) Updater.getAssetForCurrentVariant(releaseInfo) else null,
+        )
+    }
+
+    // The check's result lived only in this screen, so leaving it and coming back showed a page that
+    // had never heard of the update it offered seconds ago, and a download that is still running
+    // lost its button. The release cache is process-wide, so answer from it first: no round-trip.
+    LaunchedEffect(Unit) {
+        Updater.getCachedLatestRelease()?.let {
+            showRelease(it, Updater.isUpdateAvailable(BuildConfig.BASE_VERSION_NAME, it.versionName))
+        }
+    }
+
     fun performManualCheck() {
         coroutineScope.launch {
             isChecking = true
@@ -84,14 +104,7 @@ fun UpdaterScreen(
                 Updater
                     .checkForUpdate(forceRefresh = true)
                     .onSuccess { (releaseInfo, hasUpdate) ->
-                        if (releaseInfo != null) {
-                            latestVersion = releaseInfo.versionName
-                            updateAvailable = hasUpdate
-                            changelogContent = releaseInfo.description
-                            updateState.prepare(
-                                if (hasUpdate) Updater.getAssetForCurrentVariant(releaseInfo) else null,
-                            )
-                        }
+                        if (releaseInfo != null) showRelease(releaseInfo, hasUpdate)
                     }.onFailure {
                         checkError = String.format(failedToCheckUpdatesTemplate, it.message ?: "Unknown error")
                     }
@@ -258,14 +271,9 @@ fun UpdaterScreen(
 
             if (showChangelog && changelogContent != null) {
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    text = changelogContent!!,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                )
+                // The release body is markdown; dumped as text it shows the # and - markers, which is
+                // what the update prompt used to do too.
+                MarkdownText(changelogContent!!)
             }
 
             // The old button handed the asset URL to ACTION_VIEW, which on a TV with no browser is

@@ -224,6 +224,7 @@ import com.aura.music.ui.utils.appBarScrollBehavior
 import com.aura.music.ui.utils.resetHeightOffset
 import com.aura.music.ui.component.ApkUpdateAction
 import com.aura.music.ui.component.ApkUpdateStatus
+import com.aura.music.ui.component.AuraUpdatePrompt
 import com.aura.music.ui.component.rememberApkUpdateState
 import com.aura.music.utils.ApkUpdateInstaller
 import com.aura.music.utils.ReleaseAsset
@@ -293,6 +294,9 @@ class MainActivity : FragmentActivity() {
         /** A page still loading publishes its landing spots late, so the landing is retried. */
         private const val ReAnchorTries = 5
         private const val ReAnchorIntervalMs = 400L
+
+        /** How long a landed selector must survive the exit transition to count as a landing. */
+        private const val ReAnchorConfirmMs = 300L
     }
 
     @Inject
@@ -1198,20 +1202,33 @@ class MainActivity : FragmentActivity() {
                 // and leaving the selector there means the next ENTER undoes the navigation. A page fed
                 // by the network has published nothing yet at that point, so keep asking until either it
                 // has a landing spot or the retries run out.
+                //
+                // The launch is not one of those cases and has to be skipped: the rail owns the selector
+                // there, and its own cold-start anchor has already lit the row the page sits under. This
+                // used to give up harmlessly while the splash still covered the page, but the confirm
+                // wait below stretches the asking past the reveal, where it caught the freshly composed
+                // feed and pulled the selector out of the rail onto the Home header's refresh button.
+                var auraReAnchorLaunch by remember { mutableStateOf(true) }
                 LaunchedEffect(navBackStackEntry, showRail) {
                     if (!showRail) return@LaunchedEffect
+                    if (auraReAnchorLaunch) {
+                        auraReAnchorLaunch = false
+                        return@LaunchedEffect
+                    }
+                    // The outgoing page's row still holds the selector when this starts, and it is a
+                    // landing spot like any other, so the shell cannot read that as the new page being
+                    // armed. Drop the claim and accept only a report made after the navigation.
+                    auraPageFocus.forgetHolder()
                     delay(ReAnchorSettleMs)
                     var tries = 0
                     while (tries < ReAnchorTries) {
-                        val landedElsewhere =
-                            auraTransportHoldsFocus.value || auraPlayerHoldsFocus.value
-                        if (
-                            landedElsewhere ||
-                            auraPageFocus.anchorHoldsFocus ||
-                            auraPageFocus.requestFirstFocus()
-                        ) {
-                            break
-                        }
+                        if (auraTransportHoldsFocus.value || auraPlayerHoldsFocus.value) break
+                        if (!auraPageFocus.anchorHoldsFocus) auraPageFocus.requestFirstFocus()
+                        // A row of the page being torn down can still take the selector and lose it
+                        // again as soon as its screen is disposed, which leaves the D-pad on the header
+                        // back arrow. Only accept a landing that survives the transition.
+                        delay(ReAnchorConfirmMs)
+                        if (auraPageFocus.anchorHoldsFocus) break
                         tries++
                         delay(ReAnchorIntervalMs)
                     }
@@ -1792,57 +1809,72 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
                             }
-                            AlertDialog(
-                                onDismissRequest = dismissUpdate,
-                                title = { Text(stringResource(R.string.update_available_title)) },
-                                text = {
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .heightIn(max = 480.dp)
-                                                .verticalScroll(rememberScrollState()),
-                                    ) {
-                                        Text(
-                                            text =
-                                                stringResource(
-                                                    if (update.isKmp) {
-                                                        R.string.kmp_upgrade_title
-                                                    } else {
-                                                        R.string.update_available_message
-                                                    },
-                                                    update.release.versionName,
-                                                ),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
+                            if (LocalAuraTvShell.current) {
+                                AuraUpdatePrompt(
+                                    versionName = update.release.versionName,
+                                    changelog = update.release.description,
+                                    warning =
                                         if (update.isKmp) {
+                                            stringResource(R.string.kmp_upgrade_warning)
+                                        } else {
+                                            null
+                                        },
+                                    updateState = updateState,
+                                    onDismiss = dismissUpdate,
+                                )
+                            } else {
+                                AlertDialog(
+                                    onDismissRequest = dismissUpdate,
+                                    title = { Text(stringResource(R.string.update_available_title)) },
+                                    text = {
+                                        Column(
+                                            modifier =
+                                                Modifier
+                                                    .heightIn(max = 480.dp)
+                                                    .verticalScroll(rememberScrollState()),
+                                        ) {
                                             Text(
-                                                text = stringResource(R.string.kmp_upgrade_warning),
+                                                text =
+                                                    stringResource(
+                                                        if (update.isKmp) {
+                                                            R.string.kmp_upgrade_title
+                                                        } else {
+                                                            R.string.update_available_message
+                                                        },
+                                                        update.release.versionName,
+                                                    ),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.padding(top = 12.dp),
                                             )
+                                            if (update.isKmp) {
+                                                Text(
+                                                    text = stringResource(R.string.kmp_upgrade_warning),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.padding(top = 12.dp),
+                                                )
+                                            }
+                                            Text(
+                                                text = stringResource(R.string.changelog),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                                            )
+                                            Text(
+                                                text = update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                            ApkUpdateStatus(updateState)
                                         }
-                                        Text(
-                                            text = stringResource(R.string.changelog),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-                                        )
-                                        Text(
-                                            text = update.release.description.ifBlank { stringResource(R.string.changelog_empty) },
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        ApkUpdateStatus(updateState)
-                                    }
-                                },
-                                confirmButton = {
-                                    ApkUpdateAction(updateState)
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = dismissUpdate) {
-                                        Text(stringResource(R.string.update_not_now))
-                                    }
-                                },
-                            )
+                                    },
+                                    confirmButton = {
+                                        ApkUpdateAction(updateState)
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = dismissUpdate) {
+                                            Text(stringResource(R.string.update_not_now))
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                 }

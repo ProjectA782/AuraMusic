@@ -125,13 +125,33 @@ class AuraPageAnchors {
     }
 
     /**
-     * Move the selector to the first offer that still takes it.
+     * Move the selector to the first offer that still takes it, and answer whether one did.
      *
-     * A page can offer a container that draws a ring but holds no focus of its own, and a lazy list
-     * recycles a row it offered once the listener scrolls; asking the rest is what keeps the key alive
-     * instead of silently doing nothing.
+     * [FocusRequester.requestFocus] returns nothing: an offer whose row has already been disposed, or
+     * one the remote cannot stop on at all - a settings row with no action behind it - accepts the call
+     * and changes nothing. Asking the offers in turn and stopping at the first one that *reported* the
+     * selector is the only test that exists, and answering any earlier than that is how a page opened
+     * from another page ends up with its highlight on the header's back arrow: the shell is told the
+     * move worked, stops asking, and nothing moved at all.
      */
-    fun requestFirstFocus(): Boolean = anchors.any { it.requestFocusSafely() }
+    fun requestFirstFocus(): Boolean {
+        anchors.forEach { requester ->
+            requester.requestFocusSafely()
+            if (holder != null) return true
+        }
+        return false
+    }
+
+    /**
+     * Forget who holds the selector without touching the offers.
+     *
+     * The shell calls this the moment the destination changes: the outgoing page's row still holds the
+     * selector and still counts as a landing spot, so without it the shell would read that stale claim
+     * as the new page already being armed and never move the selector at all.
+     */
+    fun forgetHolder() {
+        holder = null
+    }
 
     private companion object {
         /** Enough for the first screenful; the rail only ever needs one reachable target. */
