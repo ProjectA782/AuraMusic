@@ -955,20 +955,6 @@ private const val NETWORK_HOOK_JS = """
         .slice(0, 300);
     } catch (e) { return 'unprintable'; }
   }
-  /*
-   * Query strings are where Spotify's own one-time ids travel — `flow_ctx` rode in plain text on the
-   * OTP request line. Only host + path are worth reading in a trace, so named values are replaced and
-   * any long opaque run left in a path is shortened.
-   */
-  function safeUrl(u) {
-    try {
-      return String(u)
-        .replace(/([?&])(flow_ctx|flowCtx|flow_context|request_context|requestContext|recaptchaToken|code|otp|totp|pin|password|email|username|sp_dc|sid|access_token|authorization_code|token)=([^&#]*)/gi,
-                  '$1$2=<redacted>')
-        .replace(/[A-Za-z0-9_\-.]{60,}/g, '<opaque>')
-        .slice(0, 220);
-    } catch (e) { return 'unprintable'; }
-  }
   function fieldNames(body) {
     try { return Object.keys(JSON.parse(body)).sort().join(','); } catch (e) { return 'non-json'; }
   }
@@ -988,7 +974,7 @@ private const val NETWORK_HOOK_JS = """
   }
   function emit(kind, url, status, body, text) {
     try {
-      console.error('AURANET ' + kind + ' ' + status + ' ' + safeUrl(url) +
+      console.error('AURANET ' + kind + ' ' + status + ' ' + url +
         ' sentFields=' + (body ? fieldNames(body) : '-') + ' ' + signals(body) +
         ' body=' + mask(text));
     } catch (e) {}
