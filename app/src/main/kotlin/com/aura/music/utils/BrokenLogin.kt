@@ -124,11 +124,26 @@ object BrokenLogin {
         return kv("cookieCount" to pairs.size, "names" to names, "sp_dc" to redact(spDc))
     }
 
-    /** Truncate a URL for logging while keeping host and path intact. */
+    /**
+     * Truncate a URL for logging while keeping host and path intact — and with the values of any
+     * credential-shaped query parameter gone.
+     *
+     * This tag stays on in release, where the only reader is `adb logcat` on someone else's TV, and
+     * the navigation URLs are exactly the ones that carry secrets: the redirect back to
+     * `open.spotify.com` puts a one-time authorization `code` in its query, and the login SPA puts
+     * Spotify's `flow_ctx` there. Host and path are the diagnosis; the values never are.
+     */
     fun shortUrl(url: String?, max: Int = 120): String {
         if (url == null) return "-"
-        return if (url.length <= max) url else url.take(max) + "...(${url.length})"
+        val safe = SENSITIVE_QUERY.replace(url) { it.groupValues[1] + it.groupValues[2] + "=<redacted>" }
+        return if (safe.length <= max) safe else safe.take(max) + "...(${safe.length})"
     }
+
+    private val SENSITIVE_QUERY = Regex(
+        "([?&])(flow_ctx|flowCtx|flow_context|request_context|requestContext|recaptchaToken|code|otp|totp|pin|" +
+            "password|email|username|login_hint|sp_dc|sid|state|token|access_token|authorization_code)=([^&#]*)",
+        RegexOption.IGNORE_CASE,
+    )
 
     // ── Trapping ─────────────────────────────────────────────────────────────────────────
 

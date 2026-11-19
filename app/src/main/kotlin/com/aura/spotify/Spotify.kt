@@ -193,9 +193,12 @@ object Spotify {
     private suspend fun graphqlPost(
         operationName: String,
         variables: JsonObject = buildJsonObject {},
+        tokenOverride: String? = null,
     ): JsonObject {
+        // A caller-supplied token lets one operation run against a different identity than the
+        // session's; the signed-in home feed needs the anonymous one to see the generic shelves.
         val token =
-            accessToken ?: throw SpotifyException(401, "Not authenticated").also {
+            tokenOverride ?: accessToken ?: throw SpotifyException(401, "Not authenticated").also {
                 log("E", "GQL $operationName — no token")
             }
 
@@ -1366,9 +1369,14 @@ object Spotify {
     suspend fun home(
         sectionItemsLimit: Int = 10,
         timeZone: String = java.util.TimeZone.getDefault().id,
+        accessTokenOverride: String? = null,
     ): Result<com.aura.spotify.models.SpotifyHomeFeed> =
         runCatching {
-            log("D", "spotifyHome: GQL home() request — timeZone=$timeZone limit=$sectionItemsLimit")
+            log(
+                "D",
+                "spotifyHome: GQL home() request — timeZone=$timeZone limit=$sectionItemsLimit " +
+                    "identity=${if (accessTokenOverride == null) "session" else "anonymous"}",
+            )
             val vars =
                 buildJsonObject {
                     put("homeEndUserIntegration", "INTEGRATION_WEB_PLAYER")
@@ -1383,6 +1391,7 @@ object Spotify {
                 graphqlPost(
                     operationName = "home",
                     variables = vars,
+                    tokenOverride = accessTokenOverride,
                 )
 
             val homeData =
@@ -1482,8 +1491,58 @@ object Spotify {
             "AlbumResponseWrapper" -> parseHomeAlbum(data)
             "ArtistResponseWrapper" -> parseHomeArtist(data)
             "TrackResponseWrapper" -> parseHomeTrack(data)
+            "EpisodeOrChapterResponseWrapper" -> parseHomeEpisode(data)
             else -> null
         }
+    }
+
+    /**
+     * A podcast episode card — the whole of the "Episodes you might like" shelf, which had no branch
+     * here at all and so was dropped without ever reaching the screen.
+     *
+     * It comes back as a song card because that is the only tile this app can act on: audio never
+     * comes from Spotify, it is resolved by name from YouTube Music, and an episode resolves the same
+     * way — show plus episode title is exactly the query a song tile already builds, and the show
+     * doubles as the tile's subtitle.
+     *
+     * Spotify's own player reads the show out of `podcastV2` and the length out of `episodeDuration`,
+     * but the `home` query selects a narrower shape than the catalogue queries, so each field is read
+     * through its fallbacks and an episode that still has no show names the keys that did arrive.
+     */
+    private fun parseHomeEpisode(data: JsonObject): com.aura.spotify.models.SpotifyHomeFeedItem.Track? {
+        // The wrapper carries chapters too — segments inside an episode — and those are not a thing a
+        // listener picks from a shelf, so only a real episode becomes a tile.
+        if (data.str("__typename") != "Episode") return null
+        val uri = data.str("uri") ?: return null
+        val name = data.str("name") ?: return null
+        val showName =
+            data.obj("podcastV2")?.obj("data")?.str("name")
+                ?: data.obj("show")?.obj("data")?.str("name")
+                ?: data.obj("podcastShow")?.str("name")
+                ?: data.obj("relatedArtists")?.arr("items")?.firstOrNull()?.jsonObject
+                    ?.obj("data")?.obj("profile")?.str("name")
+        val imageUrl =
+            data.obj("coverArt")?.arr("sources")?.firstOrNull()?.jsonObject?.str("url")
+                ?: data.obj("images")?.arr("items")?.firstOrNull()?.jsonObject
+                    ?.arr("sources")?.firstOrNull()?.jsonObject?.str("url")
+        val durationMs =
+            data.obj("episodeDuration")?.int("totalMilliseconds")
+                ?: data.obj("duration")?.int("totalMilliseconds")
+                ?: data.int("totalPlaytimeMs")
+                ?: 0
+        if (showName.isNullOrEmpty()) {
+            log("W", "spotifyHome: episode '$name' has no show in its payload — keys=${data.keys}")
+        }
+
+        return com.aura.spotify.models.SpotifyHomeFeedItem.Track(
+            uri = uri,
+            id = uri.substringAfterLast(":"),
+            name = name,
+            artists = listOfNotNull(showName?.takeIf { it.isNotBlank() }?.let { SpotifySimpleArtist(name = it) }),
+            albumName = showName,
+            durationMs = durationMs,
+            imageUrl = imageUrl,
+        )
     }
 
     /**

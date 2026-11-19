@@ -43,6 +43,7 @@ import com.aura.music.db.entities.Song
 import com.aura.music.db.entities.SpeedDialItem
 import com.aura.spotify.models.SpotifyAlbum
 import com.aura.spotify.models.SpotifyArtist
+import com.aura.spotify.models.SpotifyHomeFeed
 import com.aura.spotify.models.SpotifyHomeFeedItem
 import com.aura.spotify.models.SpotifyHomeFeedSection
 import com.aura.spotify.models.SpotifyImage
@@ -56,6 +57,7 @@ import com.aura.music.models.SectionType
 import com.aura.music.models.SimilarRecommendation
 import com.aura.music.models.SpotifyHomeSection
 import com.aura.music.models.sectionType
+import com.aura.music.models.toHomeFeedCard
 import com.aura.music.models.toSpotifyAlbum
 import com.aura.music.models.toSpotifyArtist
 import com.aura.music.models.toSpotifyPlaylist
@@ -68,6 +70,7 @@ import com.aura.music.utils.get
 import com.aura.music.playback.SpotifyProfileCache
 import com.aura.music.utils.reportException
 import com.aura.spotify.Spotify
+import com.aura.spotify.SpotifyAuth
 import com.aura.spotify.SpotifyChartRows
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -85,6 +88,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -106,6 +110,15 @@ data class CommunityPlaylistItem(
 
 /** How many `getAlbum` round-trips the New Releases warm-up runs at once. */
 private const val NewReleasePrefetchConcurrency = 6
+
+/** Tiles that fill one row of the rail. A shelf shorter than this reads as a broken screen. */
+private const val HomeRowFullWidth = 6
+
+/** Rows widened per Home load, so backfilling can never turn one refresh into twenty calls. */
+private const val HomeRowBackfillMaxRows = 4
+
+/** A row whose anchor is slow stays short; publishing Home waits for nobody past this. */
+private const val HomeRowBackfillTimeoutMs = 2_500L
 
 internal fun buildSpeedDialItems(
     pinned: List<YTItem>,
@@ -668,17 +681,36 @@ class HomeViewModel @Inject constructor(
             // absent then. The New Releases *screen* is unaffected — it has artist and YouTube
             // fallbacks of its own (see NewReleaseViewModel).
             val hasSpotifySession = context.dataStore.get(SpotifySpDcKey, "").isNotEmpty()
+            var anonymousHome: Result<SpotifyHomeFeed>? = null
             val (profileTracks, newReleasesResult, homeResult) = coroutineScope {
                 val topTracksDeferred = async { SpotifyProfileCache.getTopTracks(context, database, limit = 20) }
                 val newReleasesDeferred = async {
                     if (hasSpotifySession) Spotify.newReleases(limit = 20) else null
                 }
                 val chartsDeferred = async { Spotify.chartRows() }
-                val homeDeferred = async { Spotify.home(sectionItemsLimit = 10) }
+                val homeDeferred = async { Spotify.home(sectionItemsLimit = 20) }
+                // A signed-in `home` carries only personalized shelves — the generic discovery rows
+                // (Trending songs, Popular artists/albums, Featured Charts) live exclusively in the
+                // anonymous payload, so ask for that too and merge in the titles the account omits.
+                val anonymousHomeDeferred = async {
+                    if (!hasSpotifySession) null
+                    else SpotifyAuth.fetchAnonymousAccessToken().fold(
+                        onSuccess = { token ->
+                            Spotify.home(sectionItemsLimit = 20, accessTokenOverride = token.accessToken)
+                        },
+                        onFailure = { e ->
+                            Timber.w(e, "spotifyHome: anonymous token mint FAILED — ${e.javaClass.simpleName}: ${e.message}")
+                            null
+                        },
+                    )
+                }
                 chartsDeferred.await().onSuccess { chartRows = it }.onFailure { e ->
                     // An empty personal shelf with no failure means the session fell back to anonymous.
                     Timber.w(e, "spotifyHome: chartRows() FAILED — ${e.javaClass.simpleName}: ${e.message}")
                 }
+                anonymousHome = anonymousHomeDeferred.await().also { it?.onFailure { e ->
+                    Timber.w(e, "spotifyHome: anonymous home() FAILED — ${e.javaClass.simpleName}: ${e.message}")
+                } }
                 Triple(topTracksDeferred.await(), newReleasesDeferred.await(), homeDeferred.await())
             }
 
@@ -740,17 +772,42 @@ class HomeViewModel @Inject constructor(
             }
 
             homeResult.onSuccess { feed ->
-                Timber.d("spotifyHome: home() OK — greeting='${feed.greeting}' rawSections=${feed.sections.size}")
-                feed.sections.forEachIndexed { i, s ->
+                // The generic discovery shelves exist only in the anonymous payload. Take the ones the
+                // account's own payload has no shelf of that name for, and lead with them, because that
+                // is where they sit when signed out.
+                //
+                // 'Featured Charts' is the exception. Logged out it is the only charts row there is, so
+                // it stays. Logged in it is Spotify's generic Global Top 50 list, and the account has
+                // just been given its own 'Your Charts' and 'Country Charts' above — showing the generic
+                // row next to those would put the charts a listener does not listen to on their screen.
+                val owned = feed.sections.map { section -> section.title ?: section.typename }.toSet()
+                val genericChartsShelf = "Featured Charts"
+                val personalChartsShown = chartRows.personal.isNotEmpty()
+                val borrowed = anonymousHome?.getOrNull()?.sections
+                    ?.filter { section ->
+                        val name = section.title ?: section.typename
+                        val keep = name !in owned && !(personalChartsShown && name == genericChartsShelf)
+                        if (!keep && name == genericChartsShelf) {
+                            Timber.d("spotifyHome: skipped generic '$genericChartsShelf' — signed in, account charts are shown instead")
+                        }
+                        keep
+                    }
+                    .orEmpty()
+                val raws = borrowed + feed.sections
+                Timber.d("spotifyHome: home() OK — greeting='${feed.greeting}' rawSections=${raws.size} (session=${feed.sections.size} anonymousOnly=${borrowed.size})")
+                if (borrowed.isNotEmpty()) {
+                    Timber.d("spotifyHome:   borrowed shelves — ${borrowed.map { section -> section.title ?: section.typename }}")
+                }
+                raws.forEachIndexed { i, s ->
                     Timber.d("spotifyHome:   raw[$i] title='${s.title}' type=${s.typename} items=${s.items.size} totalCount=${s.totalCount}")
                 }
                 // Spotify sends its "More like …" and "Made for you" shelves one card at a time, which
                 // used to become one shelf per card — twenty rows of a single tile. Gathering cards by
                 // the shelf they came from puts each name back as a row header with every tile under it.
-                // Only a name carrying a lone leftover card folds into "You might like", so no tile is
-                // dropped and no row is one tile wide.
+                // A name carrying one card still keeps its own row: two artists' "More like …" prompts
+                // ask different questions, so their tiles must never share a header.
                 val singles = linkedMapOf<String, MutableList<SpotifyHomeFeedItem>>()
-                feed.sections.forEach { raw ->
+                raws.forEach { raw ->
                     val converted = convertHomeSection(raw)
                     if (converted == null) {
                         Timber.d("spotifyHome: SKIPPED '${raw.title ?: "<no title>"}' (typename=${raw.typename})")
@@ -761,42 +818,27 @@ class HomeViewModel @Inject constructor(
                         Timber.d("spotifyHome: ADDED '${converted.title}' type=${converted.type} items=${converted.items.size}")
                     }
                 }
-                val leftovers = mutableListOf<SpotifyHomeFeedItem>()
                 singles.forEach { (name, cards) ->
                     val unique = cards.distinctBy { item -> item.uri }
+                    // The same shelf can arrive both full and card-by-card; a second row with
+                    // the same header would read as a bug, so the loose cards join its tiles.
                     val home = sections.indexOfFirst { it.title == name && it.items.isNotEmpty() }
-                    when {
-                        // The same shelf can arrive both full and card-by-card; a second row with
-                        // the same header would read as a bug, so the loose cards join its tiles.
-                        home >= 0 -> {
-                            val merged = (sections[home].items + unique).distinctBy { item -> item.uri }
-                            sections[home] = sections[home].copy(items = merged)
-                            Timber.d("spotifyHome: merged ${unique.size} cards into existing row '$name' (${merged.size} cards)")
-                        }
-                        unique.size >= 2 -> {
-                            sections.add(
-                                SpotifyHomeSection(
-                                    title = name,
-                                    type = unique.first().sectionType(),
-                                    items = unique,
-                                ),
-                            )
-                            Timber.d("spotifyHome: gathered ${unique.size} single-card shelves '$name' into one row")
-                        }
-                        else -> leftovers += unique
+                    if (home >= 0) {
+                        val merged = (sections[home].items + unique).distinctBy { item -> item.uri }
+                        sections[home] = sections[home].copy(items = merged)
+                        Timber.d("spotifyHome: merged ${unique.size} cards into existing row '$name' (${merged.size} cards)")
+                    } else {
+                        sections.add(
+                            SpotifyHomeSection(
+                                title = name,
+                                type = unique.first().sectionType(),
+                                items = unique,
+                            ),
+                        )
+                        Timber.d("spotifyHome: kept '$name' as its own row (${unique.size} card(s))")
                     }
                 }
-                if (leftovers.isNotEmpty()) {
-                    val unique = leftovers.distinctBy { item -> item.uri }
-                    sections.add(
-                        SpotifyHomeSection(
-                            title = "spotify_you_might_like",
-                            type = unique.first().sectionType(),
-                            items = unique,
-                        ),
-                    )
-                    Timber.d("spotifyHome: folded ${leftovers.size} leftover cards into 'You might like' (${unique.size} cards)")
-                }
+                backfillAnchorRows(sections, hideExplicit)
             }.onFailure { e ->
                 Timber.e(e, "spotifyHome: home() FAILED — ${e.javaClass.simpleName}: ${e.message}")
             }
@@ -814,6 +856,102 @@ class HomeViewModel @Inject constructor(
 
         prefetchNewReleaseTracks(newReleaseAlbums)
     }
+
+    /**
+     * Spotify answers an anchor shelf — a "More like …" row — with one card per section, and no
+     * request parameter widens it, so the row lands as a single tile on a rail six tiles wide. The
+     * rest of the row comes from the anchor the header itself names: an artist's related artists, a
+     * playlist's own songs, an album's or a song's artist. Nothing is ever borrowed from a different
+     * anchor, because two "More like …" prompts ask different questions and must not share a header.
+     */
+    private suspend fun backfillAnchorRows(
+        sections: MutableList<SpotifyHomeSection>,
+        hideExplicit: Boolean,
+    ) {
+        val targets = sections
+            .mapIndexedNotNull { index, section ->
+                val short = section.items.size in 1 until HomeRowFullWidth
+                val anchored = section.title.startsWith("More like", ignoreCase = true)
+                if (anchored && short) index to section else null
+            }
+            .take(HomeRowBackfillMaxRows)
+        if (targets.isEmpty()) {
+            Timber.d("spotifyHome: row backfill — no short anchor row to widen")
+            return
+        }
+
+        val startedAt = System.currentTimeMillis()
+        val filled = coroutineScope {
+            targets.map { (index, section) ->
+                async(Dispatchers.IO) {
+                    val need = HomeRowFullWidth - section.items.size
+                    index to withTimeoutOrNull(HomeRowBackfillTimeoutMs) {
+                        anchorFamilyCards(section.items.first(), need, hideExplicit)
+                    }
+                }
+            }.map { deferred -> deferred.await() }
+        }
+
+        filled.forEach { (index, cards) ->
+            val section = sections[index]
+            val merged = (section.items + cards.orEmpty()).distinctBy { item -> item.uri }
+            if (merged.size > section.items.size) {
+                sections[index] = section.copy(items = merged)
+                Timber.d("spotifyHome: widened '${section.title}' ${section.items.size}→${merged.size} tiles")
+            } else {
+                Timber.w(
+                    "spotifyHome: no family cards for '${section.title}' " +
+                        "(anchor=${section.items.first()::class.simpleName})",
+                )
+            }
+        }
+        Timber.d(
+            "spotifyHome: row backfill took ${System.currentTimeMillis() - startedAt}ms " +
+                "over ${targets.size} row(s)",
+        )
+    }
+
+    /** The cards that genuinely belong under one anchor's own name, in that anchor's own family. */
+    private suspend fun anchorFamilyCards(
+        anchor: SpotifyHomeFeedItem,
+        need: Int,
+        hideExplicit: Boolean,
+    ): List<SpotifyHomeFeedItem> =
+        when (anchor) {
+            is SpotifyHomeFeedItem.Artist ->
+                Spotify.artistRelatedArtists(anchor.id).getOrNull()
+                    ?.take(need)?.map { artist -> artist.toHomeFeedCard() }.orEmpty()
+
+            is SpotifyHomeFeedItem.Playlist ->
+                Spotify.playlistTracks(anchor.id, limit = need).getOrNull()?.items
+                    ?.mapNotNull { playlistTrack -> playlistTrack.track }
+                    ?.homeFamilyTracks(need, hideExplicit)
+                    ?.map { track -> track.toHomeFeedCard() }.orEmpty()
+
+            is SpotifyHomeFeedItem.Album ->
+                artistHomeTracks(anchor.artists.firstOrNull()?.id, need, hideExplicit)
+
+            is SpotifyHomeFeedItem.Track ->
+                artistHomeTracks(anchor.artists.firstOrNull()?.id, need, hideExplicit)
+        }
+
+    private suspend fun artistHomeTracks(
+        artistId: String?,
+        need: Int,
+        hideExplicit: Boolean,
+    ): List<SpotifyHomeFeedItem> {
+        if (artistId.isNullOrEmpty()) return emptyList()
+        return Spotify.artistTopTracks(artistId).getOrNull()?.tracks
+            ?.homeFamilyTracks(need, hideExplicit)
+            ?.map { track -> track.toHomeFeedCard() }.orEmpty()
+    }
+
+    private fun List<SpotifyTrack>.homeFamilyTracks(
+        need: Int,
+        hideExplicit: Boolean,
+    ): List<SpotifyTrack> =
+        filter { track -> track.id.isNotEmpty() && (!hideExplicit || !track.explicit) }
+            .take(need)
 
     /**
      * Warms the New Releases track lists in the background once Home has landed. A tile on that

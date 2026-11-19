@@ -7,6 +7,7 @@ package com.aura.music.playback
 
 import android.util.LruCache
 import com.aura.innertube.YouTube
+import com.aura.innertube.models.EpisodeItem
 import com.aura.innertube.models.SongItem
 import com.aura.innertube.pages.SearchSummaryPage
 import com.aura.music.db.MusicDatabase
@@ -155,7 +156,13 @@ class SpotifyYouTubeMapper(
 
         val songs = searchResult.summaries
             .flatMap { it.items }
-            .filterIsInstance<SongItem>()
+            .filterIsInstance<SongItem>() +
+            // A podcast episode is not a SongItem in a search summary, but it is playable and it is
+            // what a Spotify episode card resolves to, so it competes for the match on the same terms.
+            searchResult.summaries
+                .flatMap { it.items }
+                .filterIsInstance<EpisodeItem>()
+                .map { episode -> episode.asSongItem() }
 
         var bestCandidate: MatchCandidate? = null
         // Ranking score = raw match score minus a penalty for non-studio variants

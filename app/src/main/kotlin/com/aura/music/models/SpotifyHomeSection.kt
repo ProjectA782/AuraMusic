@@ -95,3 +95,27 @@ fun SpotifyHomeFeedItem.Track.toSpotifyTrack(): SpotifyTrack =
         durationMs = durationMs,
         uri = uri,
     )
+
+/**
+ * The other direction. Content fetched for one shelf's anchor arrives as the full models, while a
+ * home row only accepts feed cards, so a card added to a row is built here rather than at the call
+ * site — and it then renders and plays exactly like a card Spotify placed there itself.
+ */
+fun SpotifyArtist.toHomeFeedCard(): SpotifyHomeFeedItem.Artist =
+    SpotifyHomeFeedItem.Artist(
+        uri = uri ?: "spotify:artist:$id",
+        id = id,
+        name = name,
+        imageUrl = images.firstOrNull()?.url,
+    )
+
+fun SpotifyTrack.toHomeFeedCard(): SpotifyHomeFeedItem.Track =
+    SpotifyHomeFeedItem.Track(
+        uri = uri ?: "spotify:track:$id",
+        id = id,
+        name = name,
+        artists = artists,
+        albumName = album?.name,
+        durationMs = durationMs,
+        imageUrl = album?.images?.firstOrNull()?.url,
+    )
