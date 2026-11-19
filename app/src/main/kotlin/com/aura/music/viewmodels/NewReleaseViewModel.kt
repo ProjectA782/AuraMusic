@@ -9,8 +9,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aura.innertube.YouTube
-import com.aura.music.constants.EnableSpotifyKey
 import com.aura.music.constants.HideExplicitKey
+import com.aura.music.constants.SpotifySpDcKey
 import com.aura.music.db.MusicDatabase
 import com.aura.music.models.NewReleaseItem
 import com.aura.music.models.ReleaseSource
@@ -77,14 +77,10 @@ constructor(
     }
 
     private suspend fun loadReleases() {
-        val spotifyEnabled = context.dataStore.get(EnableSpotifyKey, true)
         val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-
-        if (spotifyEnabled) {
-            loadSpotifyPersonalized(hideExplicit)
-        } else {
-            loadYouTubeFallback(hideExplicit)
-        }
+        // No "enableSpotify" check: that switch is retired, and this shelf already mixes
+        // Spotify and YouTube sources internally.
+        loadSpotifyPersonalized(hideExplicit)
         _isLoading.value = false
     }
 
@@ -92,11 +88,19 @@ constructor(
         try {
             coroutineScope {
                 val spotifyDeferred = async {
-                    try {
-                        Spotify.newReleases(limit = 50).getOrNull()?.albums?.items ?: emptyList()
-                    } catch (e: Exception) {
-                        Timber.w(e, "NewReleaseVM: Spotify newReleases failed")
+                    // queryWhatsNewFeed is account-only — signed out it always answers 400, so the
+                    // call is skipped rather than run to fail. Nothing visible changes: its result
+                    // was already dropped into the artist and YouTube shelves below.
+                    if (context.dataStore.get(SpotifySpDcKey, "").isEmpty()) {
+                        Timber.d("NewReleaseVM: Spotify feed skipped — signed out (needs an account)")
                         emptyList()
+                    } else {
+                        try {
+                            Spotify.newReleases(limit = 50).getOrNull()?.albums?.items ?: emptyList()
+                        } catch (e: Exception) {
+                            Timber.w(e, "NewReleaseVM: Spotify newReleases failed")
+                            emptyList()
+                        }
                     }
                 }
 

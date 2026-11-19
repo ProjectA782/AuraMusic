@@ -64,7 +64,6 @@ import com.aura.music.ui.theme.AuraMetrics
 import com.aura.music.ui.theme.AuraPrimaryContainer
 import com.aura.music.ui.theme.AuraTextPrimary
 import androidx.compose.ui.text.style.TextOverflow
-import com.aura.music.constants.EnableSpotifyKey
 import com.aura.music.constants.InnerTubeCookieKey
 import com.aura.music.constants.SpotifyAccessTokenKey
 import com.aura.music.constants.SpotifySpDcKey
@@ -101,7 +100,6 @@ fun AccountSettings(
     var spotifySpKey by rememberPreference(SpotifySpKeyKey, "")
     var spotifyTokenExpiry by rememberPreference(SpotifyTokenExpiryKey, 0L)
     var spotifyUserId by rememberPreference(SpotifyUserIdKey, "")
-    val (_, onEnableSpotifyChange) = rememberPreference(EnableSpotifyKey, true)
 
     // This sheet is the Spotify account; the YouTube cookie only gates the rows
     // that talk to YouTube Music directly.
@@ -129,7 +127,9 @@ fun AccountSettings(
         spotifyTokenExpiry = 0L
         spotifyUsername = ""
         spotifyUserId = ""
-        onEnableSpotifyChange(false)
+        // "Enable Spotify" is a user choice, not account state. Writing false here used to switch
+        // the whole Spotify feed off permanently, because nothing on the login path ever turns it
+        // back on.
         CookieManager.getInstance().removeAllCookies(null)
         // Without these the next login — possibly another account — shows stale data.
         SpotifyMetadataRegistry.clearAll()

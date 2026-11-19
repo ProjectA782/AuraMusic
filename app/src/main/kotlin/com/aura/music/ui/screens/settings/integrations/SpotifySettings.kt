@@ -52,7 +52,6 @@ import androidx.navigation.NavController
 import com.aura.music.LocalDatabase
 import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.R
-import com.aura.music.constants.EnableSpotifyKey
 import com.aura.music.constants.QobuzAudioQuality
 import com.aura.music.constants.QobuzAudioQualityKey
 import com.aura.music.constants.QobuzBackend
@@ -114,11 +113,6 @@ fun SpotifySettings(
     var spotifyTokenExpiry by rememberPreference(SpotifyTokenExpiryKey, 0L)
     var spotifyUserId by rememberPreference(SpotifyUserIdKey, "")
 
-    val (enableSpotify, onEnableSpotifyChange) = rememberPreference(
-        key = EnableSpotifyKey,
-        defaultValue = true,
-    )
-
     val isLoggedIn = remember(spotifyAccessToken, spotifySpDc) {
         spotifyAccessToken.isNotEmpty() && spotifySpDc.isNotEmpty()
     }
@@ -167,7 +161,6 @@ fun SpotifySettings(
                         spotifyTokenExpiry = 0L
                         spotifyUsername = ""
                         spotifyUserId = ""
-                        onEnableSpotifyChange(false)
                         CookieManager.getInstance().removeAllCookies(null)
                         // Clear all user-specific Spotify caches so a subsequent login
                         // (possibly a different account) never surfaces stale data.
@@ -216,11 +209,6 @@ fun SpotifyAccountContent(
     showBackendStatus: Boolean,
     beforeNavigate: () -> Unit = {},
 ) {
-    val (enableSpotify, onEnableSpotifyChange) = rememberPreference(
-        key = EnableSpotifyKey,
-        defaultValue = true,
-    )
-
     val spotifyAccessToken by rememberPreference(SpotifyAccessTokenKey, "")
     val spotifySpDc by rememberPreference(SpotifySpDcKey, "")
 
@@ -238,58 +226,53 @@ fun SpotifyAccountContent(
             title = stringResource(R.string.options),
         )
 
-        SwitchPreference(
-            title = { Text(stringResource(R.string.spotify_enable)) },
-            description = stringResource(R.string.spotify_enable_description),
-            checked = enableSpotify,
-            onCheckedChange = onEnableSpotifyChange,
+        // The retired "Enable Spotify" switch used to sit here. Logout wrote false into it and
+        // nothing wrote true back, so signing out switched Spotify off across the whole app with
+        // no way to recover. Spotify is this shell's only music source, so it is not switchable
+        // off any more; the rows below are the choices that still mean something.
+
+        val (useSpotifyHome, onUseSpotifyHomeChange) = rememberPreference(
+            key = UseSpotifyHomeKey,
+            defaultValue = true,
+        )
+        val (spotifyHomeOnly, onSpotifyHomeOnlyChange) = rememberPreference(
+            key = SpotifyHomeOnlyKey,
+            defaultValue = true,
         )
 
-        // Home works on an anonymous token, so its toggles are not login-gated.
-        if (enableSpotify) {
-            val (useSpotifyHome, onUseSpotifyHomeChange) = rememberPreference(
-                key = UseSpotifyHomeKey,
-                defaultValue = true,
-            )
-            val (spotifyHomeOnly, onSpotifyHomeOnlyChange) = rememberPreference(
-                key = SpotifyHomeOnlyKey,
-                defaultValue = true,
-            )
+        SwitchPreference(
+            title = { Text(stringResource(R.string.spotify_use_for_home)) },
+            description = stringResource(R.string.spotify_use_for_home_description),
+            checked = useSpotifyHome,
+            onCheckedChange = onUseSpotifyHomeChange,
+        )
 
+        if (useSpotifyHome) {
             SwitchPreference(
-                title = { Text(stringResource(R.string.spotify_use_for_home)) },
-                description = stringResource(R.string.spotify_use_for_home_description),
-                checked = useSpotifyHome,
-                onCheckedChange = onUseSpotifyHomeChange,
+                title = { Text(stringResource(R.string.spotify_home_only)) },
+                description = stringResource(R.string.spotify_home_only_description),
+                checked = spotifyHomeOnly,
+                onCheckedChange = onSpotifyHomeOnlyChange,
             )
-
-            if (useSpotifyHome) {
-                SwitchPreference(
-                    title = { Text(stringResource(R.string.spotify_home_only)) },
-                    description = stringResource(R.string.spotify_home_only_description),
-                    checked = spotifyHomeOnly,
-                    onCheckedChange = onSpotifyHomeOnlyChange,
-                )
-            }
         }
 
         // Search resolves with the same anonymous token the home feed uses, so it
         // does not need an account.
-        if (enableSpotify) {
-            val (useSpotifySearch, onUseSpotifySearchChange) = rememberPreference(
-                key = UseSpotifySearchKey,
-                defaultValue = false,
-            )
+        val (useSpotifySearch, onUseSpotifySearchChange) = rememberPreference(
+            key = UseSpotifySearchKey,
+            defaultValue = false,
+        )
 
-            SwitchPreference(
-                title = { Text(stringResource(R.string.spotify_use_for_search)) },
-                description = stringResource(R.string.spotify_use_for_search_description),
-                checked = useSpotifySearch,
-                onCheckedChange = onUseSpotifySearchChange,
-            )
-        }
+        SwitchPreference(
+            title = { Text(stringResource(R.string.spotify_use_for_search)) },
+            description = stringResource(R.string.spotify_use_for_search_description),
+            checked = useSpotifySearch,
+            onCheckedChange = onUseSpotifySearchChange,
+        )
 
-        if (isLoggedIn && enableSpotify) {
+        // Liking and play write-back are the only Spotify features that genuinely need
+        // an account, so they alone stay login-gated.
+        if (isLoggedIn) {
             val (syncLikes, onSyncLikesChange) = rememberPreference(
                 key = SpotifySyncLikesKey,
                 defaultValue = false,
@@ -423,7 +406,9 @@ fun SpotifyAccountContent(
             )
         }
 
-        if (enableSpotify) {
+        // Qobuz is the audio source and was never Spotify's to switch off, but it used to sit
+        // inside the enableSpotify block, so a logout hid the whole group.
+        run {
             PreferenceGroupTitle(
                 title = stringResource(R.string.qobuz_audio_quality_section),
             )

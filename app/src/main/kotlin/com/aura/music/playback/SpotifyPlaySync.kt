@@ -8,7 +8,6 @@ package com.aura.music.playback
 
 import android.content.Context
 import android.util.LruCache
-import com.aura.music.constants.EnableSpotifyKey
 import com.aura.music.constants.SpotifyAccessTokenKey
 import com.aura.music.constants.SpotifyPlaysPlaylistIdKey
 import com.aura.music.constants.SpotifySpDcKey
@@ -87,7 +86,6 @@ object SpotifyPlaySync {
     private fun isEnabled(context: Context): Boolean {
         val store = context.dataStore
         if (!store.get(SpotifySyncPlaysKey, false)) return false
-        if (!store.get(EnableSpotifyKey, true)) return false
         val hasSession =
             store.get(SpotifyAccessTokenKey, "").isNotEmpty() &&
                 store.get(SpotifySpDcKey, "").isNotEmpty()

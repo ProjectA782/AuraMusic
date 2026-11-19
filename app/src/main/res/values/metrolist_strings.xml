@@ -1069,6 +1069,7 @@
     <string name="new_releases_discover">Discover</string>
     <string name="spotify_because_you_like">Because you like %s</string>
     <string name="aura_recommended_for_you">Recommended for You</string>
+    <string name="aura_home_no_content">No shelves from Spotify just now.</string>
     <string name="spotify_remove_from_playlist">Remove from playlist</string>
     <string name="spotify_remove_from_playlist_desc">Remove this track from the Spotify playlist</string>
     <string name="spotify_track_removed">Track removed from playlist</string>

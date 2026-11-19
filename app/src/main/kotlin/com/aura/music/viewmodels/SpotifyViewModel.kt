@@ -15,7 +15,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aura.music.constants.EnableSpotifyKey
 import com.aura.music.constants.SpotifyAccessTokenKey
 import com.aura.music.db.MusicDatabase
 import com.aura.music.playback.SpotifyYouTubeMapper
@@ -68,11 +67,9 @@ constructor(
 
     val isSpotifyActive = context.dataStore.data
         .map {
-            val enabled = it[EnableSpotifyKey] ?: true
             val hasToken = (it[SpotifyAccessTokenKey] ?: "").isNotEmpty()
-            val active = enabled && hasToken
-            Timber.d("SpotifyVM: isSpotifyActive=$active (enabled=$enabled, hasToken=$hasToken)")
-            active
+            Timber.d("SpotifyVM: isSpotifyActive=$hasToken (hasToken=$hasToken)")
+            hasToken
         }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)

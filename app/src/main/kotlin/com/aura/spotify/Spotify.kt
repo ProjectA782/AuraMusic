@@ -1481,8 +1481,28 @@ object Spotify {
             "PlaylistResponseWrapper" -> parseHomePlaylist(data)
             "AlbumResponseWrapper" -> parseHomeAlbum(data)
             "ArtistResponseWrapper" -> parseHomeArtist(data)
+            "TrackResponseWrapper" -> parseHomeTrack(data)
             else -> null
         }
+    }
+
+    /**
+     * A song card, e.g. the "Trending songs" shelf Spotify puts at the top of a signed-out home.
+     * The payload is the same track shape every other GQL operation sends, so it goes through
+     * [parseGqlTrack] rather than a second parser; the cover lives on the album, not the track.
+     */
+    private fun parseHomeTrack(data: JsonObject): com.aura.spotify.models.SpotifyHomeFeedItem.Track? {
+        val uri = data.str("uri") ?: return null
+        val track = parseGqlTrack(data)
+        return com.aura.spotify.models.SpotifyHomeFeedItem.Track(
+            uri = uri,
+            id = track.id,
+            name = track.name,
+            artists = track.artists,
+            albumName = track.album?.name,
+            durationMs = track.durationMs,
+            imageUrl = track.album?.images?.firstOrNull()?.url,
+        )
     }
 
     private fun parseHomePlaylist(data: JsonObject): com.aura.spotify.models.SpotifyHomeFeedItem.Playlist? {

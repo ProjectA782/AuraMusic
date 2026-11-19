@@ -12,6 +12,7 @@ import com.aura.spotify.models.SpotifyImage
 import com.aura.spotify.models.SpotifyPlaylist
 import com.aura.spotify.models.SpotifyPlaylistOwner
 import com.aura.spotify.models.SpotifyPlaylistTracksRef
+import com.aura.spotify.models.SpotifySimpleAlbum
 import com.aura.spotify.models.SpotifyTrack
 
 /**
@@ -45,11 +46,12 @@ fun SpotifyHomeFeedItem.sectionType(): SectionType =
         is SpotifyHomeFeedItem.Playlist -> SectionType.PLAYLISTS
         is SpotifyHomeFeedItem.Album -> SectionType.ALBUMS
         is SpotifyHomeFeedItem.Artist -> SectionType.ARTISTS
+        is SpotifyHomeFeedItem.Track -> SectionType.TRACKS
     }
 
 /**
  * A feed card is a thin projection of what Spotify's shelf sent; the menus and players downstream
- * expect the full models, so every consumer converts through these three.
+ * expect the full models, so every consumer converts through these four.
  */
 fun SpotifyHomeFeedItem.Playlist.toSpotifyPlaylist(): SpotifyPlaylist =
     SpotifyPlaylist(
@@ -77,5 +79,19 @@ fun SpotifyHomeFeedItem.Artist.toSpotifyArtist(): SpotifyArtist =
         id = id,
         name = name,
         images = imageUrl?.let { listOf(SpotifyImage(url = it)) } ?: emptyList(),
+        uri = uri,
+    )
+
+/**
+ * A home song card keeps only what a tile shows, so the album it rebuilds carries the cover and
+ * nothing else — enough for the tile art and for resolving audio from the song and artist names.
+ */
+fun SpotifyHomeFeedItem.Track.toSpotifyTrack(): SpotifyTrack =
+    SpotifyTrack(
+        id = id,
+        name = name,
+        artists = artists,
+        album = SpotifySimpleAlbum(name = albumName.orEmpty()),
+        durationMs = durationMs,
         uri = uri,
     )

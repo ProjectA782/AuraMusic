@@ -24,7 +24,6 @@ import com.aura.innertube.models.filterYoutubeShorts
 import com.aura.innertube.pages.ExplorePage
 import com.aura.innertube.pages.HomePage
 import com.aura.innertube.utils.completed
-import com.aura.music.constants.EnableSpotifyKey
 import com.aura.music.constants.SpotifyHomeOnlyKey
 import com.aura.music.constants.HideExplicitKey
 import com.aura.music.constants.HideVideoSongsKey
@@ -33,7 +32,7 @@ import com.aura.music.constants.InnerTubeCookieKey
 import com.aura.music.constants.QuickPicks
 import com.aura.music.constants.QuickPicksKey
 import com.aura.music.constants.SpotifyAccessTokenKey
-import com.aura.music.constants.SpotifyAnonymousHomeKey
+import com.aura.music.constants.SpotifySpDcKey
 import com.aura.music.utils.SpotifyTokenManager
 import com.aura.music.constants.SpotifyTokenExpiryKey
 import com.aura.music.constants.UseSpotifyHomeKey
@@ -60,6 +59,7 @@ import com.aura.music.models.sectionType
 import com.aura.music.models.toSpotifyAlbum
 import com.aura.music.models.toSpotifyArtist
 import com.aura.music.models.toSpotifyPlaylist
+import com.aura.music.models.toSpotifyTrack
 import com.aura.music.utils.NetworkConnectivityObserver
 import com.aura.music.utils.SyncUtils
 import com.aura.music.utils.dataStore
@@ -284,20 +284,13 @@ class HomeViewModel @Inject constructor(
     val spotifyHomeSections = MutableStateFlow<List<SpotifyHomeSection>?>(null)
     val newReleaseTracks = MutableStateFlow<Map<String, List<SpotifyTrack>>>(emptyMap())
     val useSpotifyHome: StateFlow<Boolean> = context.dataStore.data.map { prefs ->
-        val enabled = prefs[EnableSpotifyKey] ?: true
-        val useForHome = prefs[UseSpotifyHomeKey] ?: true
-        val hasToken = (prefs[SpotifyAccessTokenKey] ?: "").isNotEmpty() ||
-            (prefs[SpotifyAnonymousHomeKey] ?: false)
-        enabled && useForHome && hasToken
+        prefs[UseSpotifyHomeKey] ?: true
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     val spotifyHomeOnly: StateFlow<Boolean> = context.dataStore.data.map { prefs ->
-        val enabled = prefs[EnableSpotifyKey] ?: true
         val useForHome = prefs[UseSpotifyHomeKey] ?: true
         val homeOnly = prefs[SpotifyHomeOnlyKey] ?: true
-        val hasToken = (prefs[SpotifyAccessTokenKey] ?: "").isNotEmpty() ||
-            (prefs[SpotifyAnonymousHomeKey] ?: false)
-        enabled && useForHome && homeOnly && hasToken
+        useForHome && homeOnly
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, true)
 
     /** Set of speed dial item ids (used to show Pin/Unpin for Spotify playlists in home section). */
@@ -509,13 +502,12 @@ class HomeViewModel @Inject constructor(
 
         // Read Spotify preferences directly from DataStore to avoid StateFlow race condition
         val prefs = context.dataStore.data.first()
-        val spotifyEnabled = prefs[EnableSpotifyKey] ?: true
-        val spotifyUseForHome = prefs[UseSpotifyHomeKey] ?: true
         val spotifyHomeOnlyPref = prefs[SpotifyHomeOnlyKey] ?: true
-        val spotifyHasToken = (prefs[SpotifyAccessTokenKey] ?: "").isNotEmpty() ||
-            (prefs[SpotifyAnonymousHomeKey] ?: false)
-        val isSpotifyHome = spotifyEnabled && spotifyUseForHome && spotifyHasToken
-        val isSpotifyOnly = isSpotifyHome && spotifyHomeOnlyPref
+        // No login term and no service switch term belongs in this gate. Spotify is the only
+        // thing this shell can draw for Home, and ensureAuthenticated() provisions an anonymous
+        // token when none is stored, so making Home depend on either one left a signed-out user
+        // with a blank page and no way back.
+        val isSpotifyOnly = spotifyHomeOnlyPref
 
         // Local play history — always loaded regardless of Spotify mode
         recentlyPlayed.value = database.events().first()
@@ -613,13 +605,15 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        // Load remote content: Spotify or YouTube depending on preference
-        Timber.d("spotifyHome: gate isSpotifyHome=$isSpotifyHome isSpotifyOnly=$isSpotifyOnly")
-        if (isSpotifyHome && SpotifyTokenManager.ensureAuthenticated()) {
+        // Spotify is the shell's home source, always. The only runtime condition is having a
+        // token to ask with, and ensureAuthenticated() gives an anonymous one when there is no
+        // session, so a signed-out device still gets populated shelves.
+        Timber.d("spotifyHome: gate isSpotifyOnly=$isSpotifyOnly")
+        if (SpotifyTokenManager.ensureAuthenticated()) {
             Timber.d("spotifyHome: auth OK, loading Spotify sections")
             loadSpotifyHomeSections(hideExplicit)
         } else if (!isSpotifyOnly) {
-            Timber.d("spotifyHome: falling back to YouTube home (auth failed or not enabled)")
+            Timber.d("spotifyHome: falling back to YouTube home (no token could be obtained)")
             spotifyHomeSections.value = null
 
             YouTube.home().onSuccess { page ->
@@ -668,9 +662,17 @@ class HomeViewModel @Inject constructor(
             // assemble the sections in a fixed display order. Previously they ran
             // strictly sequentially (~1-2.7s of chained round-trips).
             var chartRows = SpotifyChartRows()
+            // `queryWhatsNewFeed` is the one Home source that needs an account: with an anonymous
+            // token Spotify's content-feed service rejects the subrequest with 400, so signed out
+            // the call is a round-trip that cannot succeed on every cold start. The shelf is simply
+            // absent then. The New Releases *screen* is unaffected — it has artist and YouTube
+            // fallbacks of its own (see NewReleaseViewModel).
+            val hasSpotifySession = context.dataStore.get(SpotifySpDcKey, "").isNotEmpty()
             val (profileTracks, newReleasesResult, homeResult) = coroutineScope {
                 val topTracksDeferred = async { SpotifyProfileCache.getTopTracks(context, database, limit = 20) }
-                val newReleasesDeferred = async { Spotify.newReleases(limit = 20) }
+                val newReleasesDeferred = async {
+                    if (hasSpotifySession) Spotify.newReleases(limit = 20) else null
+                }
                 val chartsDeferred = async { Spotify.chartRows() }
                 val homeDeferred = async { Spotify.home(sectionItemsLimit = 10) }
                 chartsDeferred.await().onSuccess { chartRows = it }.onFailure { e ->
@@ -693,21 +695,25 @@ class HomeViewModel @Inject constructor(
                 Timber.w("spotifyHome: no top tracks — skipping pinned section")
             }
 
-            newReleasesResult.onSuccess { newReleases ->
-                val albums = newReleases.albums?.items.orEmpty()
-                newReleaseAlbums = albums
-                if (albums.isNotEmpty()) {
-                    sections.add(SpotifyHomeSection(
-                        title = "spotify_new_releases",
-                        type = SectionType.ALBUMS,
-                        albums = albums,
-                    ))
-                    Timber.d("spotifyHome: added pinned section 'New Releases' (${albums.size} albums)")
-                } else {
-                    Timber.w("spotifyHome: newReleases returned 0 albums — skipping section")
+            if (newReleasesResult == null) {
+                Timber.d("spotifyHome: 'New Releases' skipped — signed out, where the feed always 400s")
+            } else {
+                newReleasesResult.onSuccess { newReleases ->
+                    val albums = newReleases.albums?.items.orEmpty()
+                    newReleaseAlbums = albums
+                    if (albums.isNotEmpty()) {
+                        sections.add(SpotifyHomeSection(
+                            title = "spotify_new_releases",
+                            type = SectionType.ALBUMS,
+                            albums = albums,
+                        ))
+                        Timber.d("spotifyHome: added pinned section 'New Releases' (${albums.size} albums)")
+                    } else {
+                        Timber.w("spotifyHome: newReleases returned 0 albums — skipping section")
+                    }
+                }.onFailure { e ->
+                    Timber.e(e, "spotifyHome: newReleases() FAILED — ${e.javaClass.simpleName}: ${e.message}")
                 }
-            }.onFailure { e ->
-                Timber.e(e, "spotifyHome: newReleases() FAILED — ${e.javaClass.simpleName}: ${e.message}")
             }
 
             // The rail has no Charts tab, so both shelves live here. A tile's ranked list is an
@@ -859,11 +865,13 @@ class HomeViewModel @Inject constructor(
         val playlists = feedSection.items.filterIsInstance<SpotifyHomeFeedItem.Playlist>()
         val albums = feedSection.items.filterIsInstance<SpotifyHomeFeedItem.Album>()
         val artists = feedSection.items.filterIsInstance<SpotifyHomeFeedItem.Artist>()
+        val tracks = feedSection.items.filterIsInstance<SpotifyHomeFeedItem.Track>()
 
         val counts = listOf(
             SectionType.PLAYLISTS to playlists.size,
             SectionType.ALBUMS to albums.size,
             SectionType.ARTISTS to artists.size,
+            SectionType.TRACKS to tracks.size,
         )
         val (dominant, size) = counts.maxByOrNull { it.second } ?: return null
         if (size == 0) return null
@@ -871,6 +879,7 @@ class HomeViewModel @Inject constructor(
         return SpotifyHomeSection(
             title = title,
             type = dominant,
+            tracks = tracks.map { it.toSpotifyTrack() },
             playlists = playlists.map { it.toSpotifyPlaylist() },
             albums = albums.map { it.toSpotifyAlbum() },
             artists = artists.map { it.toSpotifyArtist() },
@@ -1083,9 +1092,8 @@ class HomeViewModel @Inject constructor(
         // startup and update the cached SpeedDialItem when the thumbnail URL changed.
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val enabled = context.dataStore.get(EnableSpotifyKey, true)
                 val token = context.dataStore.get(SpotifyAccessTokenKey, "")
-                if (!enabled || token.isEmpty()) return@launch
+                if (token.isEmpty()) return@launch
                 val pinned = database.speedDialDao.getAll().first()
                 pinned.asSequence()
                     .filter { it.id.startsWith("spotify:") }

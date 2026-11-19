@@ -139,8 +139,10 @@ fun SpotifyLoginScreen(navController: NavController) {
                     val bl = BrokenLogin.nextId("login")
                     val cookieManager = CookieManager.getInstance()
                     cookieManager.setAcceptCookie(true)
-                    cookieManager.removeAllCookies(null)
-                    cookieManager.flush()
+                    // This used to wipe every cookie before loading the page. Signing out already
+                    // clears them (App.forgetAccount, AccountSettings, SpotifySettings), so all this
+                    // did was throw away the `sp_t`/`dt` device identity Spotify's login checks
+                    // expect to already be there, and force a retyping on every visit.
 
                     WebView(ctx).apply {
                         cookieManager.setAcceptThirdPartyCookies(this, true)
@@ -153,8 +155,24 @@ fun SpotifyLoginScreen(navController: NavController) {
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                         settings.javaScriptCanOpenWindowsAutomatically = true
                         settings.setSupportMultipleWindows(false)
-                        settings.userAgentString = USER_AGENT_DESKTOP
-
+                        /*
+                         * No User-Agent override for Spotify's own pages.
+                         *
+                         * Chromium sends the low-entropy Client Hints — `Sec-CH-UA`,
+                         * `Sec-CH-UA-Mobile`, `Sec-CH-UA-Platform` — on every HTTPS request whether
+                         * or not the server asked for them with `Accept-CH` (Spotify never does), and
+                         * an app cannot rewrite them before API 35. So overriding only the UA made
+                         * this WebView say Windows in one header and Android in the next: the
+                         * textbook signature of a WebView pretending to be a desktop browser, and
+                         * exactly the inconsistency a login risk check scores. The measured proof is
+                         * in the trace — the submit carried a complete 2446-character reCAPTCHA token
+                         * and every cookie, and the server still answered `internal_error`, while the
+                         * hints contradicted the UA on the very first document request.
+                         *
+                         * The engine's own string is self-consistent, so it is left alone. Facebook
+                         * is the single exception, in [userAgentFor].
+                         */
+                        val nativeUserAgent = settings.userAgentString
 
                         /*
                          * The WebView implementation is a separate, auto-updating system package.
@@ -240,6 +258,13 @@ fun SpotifyLoginScreen(navController: NavController) {
                                 isLoading = true
                                 Timber.d("SpotifyLogin: page started: $url")
                                 BrokenLogin.i(bl, "page.started", BrokenLogin.kv("url" to BrokenLogin.shortUrl(url)))
+                                // Spotify's own submit call is the one that fails, and the WebView
+                                // reports only its status code. This hook makes the page echo the
+                                // response body into the console, which the WebChromeClient above
+                                // already logs — the difference between "400" and "400 errorCSRF".
+                                BrokenLogin.trap(bl, "net.hook") {
+                                    view?.evaluateJavascript(NETWORK_HOOK_JS, null)
+                                }
                             }
 
                             override fun onReceivedError(
@@ -326,7 +351,15 @@ fun SpotifyLoginScreen(navController: NavController) {
                                         "contentHeight" to BrokenLogin.trap(bl, "page.height") { view?.contentHeight },
                                         "title" to BrokenLogin.trap(bl, "page.title") { view?.title },
                                     ) + " " + BrokenLogin.describeCookies(
-                                        BrokenLogin.trap(bl, "page.cookies") {
+                                        // The login page is served from accounts.spotify.com and its
+                                        // CSRF cookies live there; reading only open.spotify.com made
+                                        // every trace say `names=sp_t` while telling us nothing about
+                                        // the cookies the submit actually needs.
+                                        BrokenLogin.trap(bl, "page.cookies.accounts") {
+                                            CookieManager.getInstance().getCookie("https://accounts.spotify.com")
+                                        },
+                                    ) + " " + BrokenLogin.describeCookies(
+                                        BrokenLogin.trap(bl, "page.cookies.open") {
                                             CookieManager.getInstance().getCookie("https://open.spotify.com")
                                         },
                                     ),
@@ -367,6 +400,18 @@ fun SpotifyLoginScreen(navController: NavController) {
                                         "redirect" to request.isRedirect,
                                     ),
                                 )
+
+                                /*
+                                 * The UA is chosen per navigation, here, because this is the last
+                                 * point before the document request leaves — and the document
+                                 * request is where Spotify's login check reads it.
+                                 */
+                                BrokenLogin.trap(bl, "ua.apply") {
+                                    if (view != null) {
+                                        view.settings.userAgentString =
+                                            userAgentFor(requestUrl, nativeUserAgent)
+                                    }
+                                }
 
                                 if (requestUrl.startsWith("https://open.spotify.com")) {
                                     val spDc = extractSpDcCookie()
@@ -571,6 +616,20 @@ private fun probeDom(bl: String, view: WebView?) {
               bodyChildren: b ? b.children.length : -1,
               htmlLen: b ? b.innerHTML.length : -1,
               textLen: b ? (b.innerText || '').trim().length : -1,
+              /*
+               * Spotify renders a refusal as a page of its own, so its wording is the diagnosis —
+               * "Something went wrong" from a captcha rejection and from a dead backend look
+               * identical from the outside. The login page can echo the account name, so anything
+               * address-shaped is masked before it reaches logcat: a capture of this tag has to
+               * stay safe to paste into a public issue.
+               */
+              pageText: (function () {
+                var t = b ? (b.innerText || '') : '';
+                return t.replace(/[\w.+-]+@[\w.-]+\.\w+/g, '<email>')
+                        .replace(/\s+/g, ' ')
+                        .trim()
+                        .slice(0, 240);
+              })(),
               elements: all.length,
               visibleElements: vis,
               paintedElements: painted,
@@ -589,6 +648,23 @@ private fun probeDom(bl: String, view: WebView?) {
               htmlScrollH: document.documentElement.scrollHeight,
               bodyOverflow: b ? getComputedStyle(b).overflow : '-',
               htmlOverflow: getComputedStyle(document.documentElement).overflow,
+              /*
+               * What the page's own Client Hints API reports is what Chromium writes into the
+               * `Sec-CH-UA`, `Sec-CH-UA-Mobile` and `Sec-CH-UA-Platform` request headers — and
+               * those go out on every request whether or not the server asked for them with
+               * `Accept-CH` (Spotify never does). `settings.userAgentString` is the one part of
+               * that set an app can rewrite, so a UA claiming Windows next to hints saying Android
+               * is the signature of a spoofing WebView. This is the measurement that decides
+               * whether our own UA override was what Spotify refused.
+               */
+              clientHints: (function () {
+                var ud = navigator.userAgentData;
+                if (!ud) return 'none';
+                var brands = (ud.brands || []).map(function (x) {
+                  return x.brand + '/' + x.version;
+                }).join(',');
+                return 'platform=' + ud.platform + ' mobile=' + ud.mobile + ' brands=' + brands;
+              })(),
               colours: colours,
               ancestors: chain
             });
@@ -857,18 +933,138 @@ private fun classifyLoginError(context: Context, e: Exception): String {
 }
 
 /**
- * Desktop Chrome User-Agent. Required by the social login providers:
- * - Facebook's mobile JS has compatibility issues with Android WebView
- * - Spotify and social login providers render more stable desktop pages
+ * Wraps `fetch` and `XMLHttpRequest` so Spotify's own login requests print their response body into
+ * the console, which the `WebChromeClient` above forwards to [BrokenLogin].
  *
- * A mobile UA was tried here and reverted. It did **not** fix the black login screen — Spotify's
- * `<main>` still collapsed to 48 px around 729 px of content under both user agents, so the page
- * is responsive rather than desktop-vs-mobile and the UA was never the cause. What it did do was
- * send Facebook OAuth to `m.facebook.com`, whose bundle then threw
- * `Uncaught TypeError: Cannot read properties of undefined (reading 'getElementsByTagName')`
- * and left the login unusable — exactly the incompatibility this constant exists to avoid.
+ * `onReceivedHttpError` can only report a status: the WebView gave us `400` on
+ * `accounts.spotify.com/login/code/send` and nothing else, while the JSON behind that 400 names the
+ * check that failed. Matching is by path, only the request's *field names* are printed, and the body
+ * is masked — addresses and long token-shaped runs replaced — so a capture stays safe to paste into
+ * a public issue.
+ */
+private const val NETWORK_HOOK_JS = """
+(function () {
+  if (window.__auraNet) return;
+  window.__auraNet = true;
+  function mask(v) {
+    try {
+      return String(v)
+        .replace(/[\w.+-]+@[\w.-]+\.\w+/g, '<email>')
+        .replace(/[A-Za-z0-9_\-.]{60,}/g, '<opaque>')
+        .replace(/\s+/g, ' ')
+        .slice(0, 300);
+    } catch (e) { return 'unprintable'; }
+  }
+  /*
+   * Query strings are where Spotify's own one-time ids travel — `flow_ctx` rode in plain text on the
+   * OTP request line. Only host + path are worth reading in a trace, so named values are replaced and
+   * any long opaque run left in a path is shortened.
+   */
+  function safeUrl(u) {
+    try {
+      return String(u)
+        .replace(/([?&])(flow_ctx|flowCtx|flow_context|request_context|requestContext|recaptchaToken|code|otp|totp|pin|password|email|username|sp_dc|sid|access_token|authorization_code|token)=([^&#]*)/gi,
+                  '$1$2=<redacted>')
+        .replace(/[A-Za-z0-9_\-.]{60,}/g, '<opaque>')
+        .slice(0, 220);
+    } catch (e) { return 'unprintable'; }
+  }
+  function fieldNames(body) {
+    try { return Object.keys(JSON.parse(body)).sort().join(','); } catch (e) { return 'non-json'; }
+  }
+  /*
+   * The two anti-automation signals are opaque strings, so their *lengths* are the whole
+   * measurement: a 400 `internal_error` sent with a 500-character reCAPTCHA token means Spotify
+   * received a complete request and still refused the environment, while a zero-length one means
+   * reCAPTCHA never ran in this WebView at all. Those two answers lead to different decisions, and
+   * only the lengths go into the log — never the values.
+   */
+  function signals(body) {
+    try {
+      var o = JSON.parse(body);
+      function len(v) { return (typeof v === 'string') ? v.length : String(v); }
+      return 'recaptchaTokenLen=' + len(o.recaptchaToken) + ' automationKeyLen=' + len(o.automationKey);
+    } catch (e) { return 'signals=-'; }
+  }
+  function emit(kind, url, status, body, text) {
+    try {
+      console.error('AURANET ' + kind + ' ' + status + ' ' + safeUrl(url) +
+        ' sentFields=' + (body ? fieldNames(body) : '-') + ' ' + signals(body) +
+        ' body=' + mask(text));
+    } catch (e) {}
+  }
+  function interesting(u) {
+    return u.indexOf('/login/') >= 0 || u.indexOf('/authenticate/') >= 0 || u.indexOf('/device') >= 0;
+  }
+  var of = window.fetch;
+  if (of) {
+    window.fetch = function (input, init) {
+      var url = (typeof input === 'string') ? input : (input && input.url) || '?';
+      var body = (init && init.body) || (input && input.body) || null;
+      var result = of.apply(this, arguments);
+      if (interesting(url)) {
+        result.then(function (r) {
+          try { r.clone().text().then(function (t) { emit('fetch', url, r.status, body, t); }); } catch (e) {}
+        });
+      }
+      return result;
+    };
+  }
+  var XO = XMLHttpRequest.prototype.open;
+  var XS = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function (m, u) {
+    this.__auraUrl = u; this.__auraMethod = m;
+    return XO.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function (b) {
+    var self = this;
+    var u = self.__auraUrl || '?';
+    if (interesting(u)) {
+      self.addEventListener('loadend', function () {
+        emit('xhr-' + (self.__auraMethod || '?'), u, self.status, b, self.responseText);
+      });
+    }
+    return XS.apply(this, arguments);
+  };
+})();
+"""
+
+/**
+ * Desktop Chrome User-Agent, used only for Facebook — see [userAgentFor].
  *
- * The collapsed layout is handled where it actually occurs, in [applyLoginLayoutFix].
+ * It is *not* used for Spotify any more. Two claims in the older version of this comment turned out
+ * to be wrong. First, the desktop UA never fixed the black login screen: Spotify's `<main>` still
+ * collapsed to 48 px around 729 px of content under both user agents, so the page is responsive
+ * rather than desktop-vs-mobile, and the collapse is handled where it actually occurs, in
+ * [applyLoginLayoutFix]. Second, "a desktop UA makes the login more stable" was the opposite of
+ * true: Chromium sends the low-entropy Client Hints on every HTTPS request and they cannot be
+ * rewritten before API 35, so claiming Windows from an Android WebView put two contradictory
+ * environment headers on the wire — and the login submit that carried a complete reCAPTCHA token and
+ * every cookie still came back `internal_error`.
  */
 private const val USER_AGENT_DESKTOP =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+
+/**
+ * The User-Agent for one navigation of the login flow.
+ *
+ * Spotify's own hosts get [nativeUserAgent] — the string this WebView really is — so the UA header
+ * and the `Sec-CH-UA-*` Client Hints that go out beside it describe the same browser. Facebook is
+ * the one exception that still needs the desktop UA: its *mobile* bundle throws
+ * `Uncaught TypeError: Cannot read properties of undefined (reading 'getElementsByTagName')` and
+ * leaves the page dead, which is a defect in Facebook's own JavaScript that nothing here can fix.
+ */
+private fun userAgentFor(url: String?, nativeUserAgent: String?): String? =
+    if (url?.contains("facebook.com") == true) desktopUaOf(nativeUserAgent) else nativeUserAgent
+
+/**
+ * [USER_AGENT_DESKTOP] with the Chrome major taken from [webViewUa], so the page gets the desktop
+ * layout it expects while the version still describes the engine actually rendering it. Falls back
+ * to the constant when the WebView reports no Chrome version at all.
+ */
+private fun desktopUaOf(webViewUa: String?): String {
+    val chromeMajor = Regex("Chrome/(\\d+)").find(webViewUa ?: "")?.groupValues?.get(1)
+        ?: return USER_AGENT_DESKTOP
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+        "Chrome/$chromeMajor.0.0.0 Safari/537.36"
+}

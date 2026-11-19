@@ -71,6 +71,7 @@ import com.aura.music.models.SpotifyHomeSection
 import com.aura.music.models.toSpotifyAlbum
 import com.aura.music.models.toSpotifyArtist
 import com.aura.music.models.toSpotifyPlaylist
+import com.aura.music.models.toSpotifyTrack
 import com.aura.music.playback.SpotifyYouTubeMapper
 import com.aura.music.playback.queues.SpotifyPlaylistQueue
 import com.aura.music.playback.queues.SpotifyQueue
@@ -80,6 +81,9 @@ import com.aura.music.ui.menu.SpotifyPlaylistMenu
 import com.aura.music.ui.menu.SpotifyTrackMenu
 import com.aura.music.ui.theme.TvRowNav
 import com.aura.music.ui.theme.rememberTvRowNav
+import com.aura.music.constants.SpotifyAccessTokenKey
+import com.aura.music.constants.SpotifySpDcKey
+import com.aura.music.utils.rememberPreference
 import com.aura.music.utils.toAlbumItem
 import com.aura.music.utils.toArtistItem
 import com.aura.music.utils.toPlaylistItem
@@ -126,6 +130,10 @@ fun AuraHome(
     val spotifyMapper = remember { SpotifyYouTubeMapper(database) }
     val scope = rememberCoroutineScope()
     val menuState = LocalMenuState.current
+
+    val spotifyAccessToken by rememberPreference(SpotifyAccessTokenKey, "")
+    val spotifySpDc by rememberPreference(SpotifySpDcKey, "")
+    val isSpotifyLoggedIn = spotifyAccessToken.isNotEmpty() && spotifySpDc.isNotEmpty()
 
     // A shelf tile is the only place a TV user can reach a track menu from the feed, and the
     // remote has no long-press-free gesture, so the pick carries the menu as its long-press.
@@ -335,17 +343,26 @@ fun AuraHome(
             }
         }
 
-        // The round-trip can also come back with nothing in it — expired anonymous token, a
-        // rejected shelf call, an empty Spotify home for this region. That used to leave only the
-        // page title on screen, which reads as a hang with no way out.
+        // The round-trip can also come back with nothing in it — the anonymous token call
+        // failed, a shelf call was rejected, or Spotify sent an empty home for this region.
+        // That used to leave only the page title on screen, which reads as a hang with no way
+        // out. Nothing here may suggest a login is required: the shelves run anonymously.
         if (sections.isEmpty() && !isLoading && !isRefreshing) {
             item(key = "aura_home_empty") {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 48.apx()),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.spacedBy(
+                        40.apx(),
+                        Alignment.CenterHorizontally,
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    AuraText(
+                        value = stringResource(R.string.aura_home_no_content),
+                        px = 30,
+                    )
                     AuraPillButton(
                         label = stringResource(R.string.retry),
                         icon = R.drawable.aura_ic_refresh_cw,
@@ -353,6 +370,13 @@ fun AuraHome(
                         onClick = { viewModel.refresh() },
                         modifier = Modifier.auraFocused(),
                     )
+                    if (!isSpotifyLoggedIn) {
+                        AuraPillButton(
+                            label = stringResource(R.string.spotify_login),
+                            onClick = { navController.navigate("settings/spotify/login") },
+                            modifier = Modifier.auraFocused(),
+                        )
+                    }
                 }
             }
         }
@@ -566,6 +590,21 @@ private fun SpotifyHomeSection.toAuraPicks(
                     onClick = { onArtistOpen(artist) },
                 )
             }
+
+            // A song tile plays, same as the pinned top-tracks row: the card is the thing you want
+            // to hear, so there is no detail screen to stop at first.
+            is SpotifyHomeFeedItem.Track -> {
+                val track = item.toSpotifyTrack()
+                AuraPick(
+                    id = item.id,
+                    title = item.name,
+                    subtitle = item.sourceTitle
+                        ?: track.artists.joinToString(", ") { a -> a.name },
+                    image = item.imageUrl,
+                    onClick = { onTrackPlay(track) },
+                    onLongClick = { onMenu(track) },
+                )
+            }
         }
     }
 
@@ -674,6 +713,23 @@ private fun SpotifyHomeSection.toAuraHeroLeads(onMenu: (Any) -> Unit): List<Aura
                         ),
                         entity = item.toSpotifyArtist(),
                     )
+
+                is SpotifyHomeFeedItem.Track -> {
+                    val track = item.toSpotifyTrack()
+                    AuraHeroLead(
+                        R.string.type_song,
+                        AuraPick(
+                            id = item.id,
+                            title = item.name,
+                            subtitle = item.sourceTitle
+                                ?: track.artists.joinToString(", ") { a -> a.name },
+                            image = item.imageUrl,
+                            onClick = noAction,
+                            onLongClick = { onMenu(track) },
+                        ),
+                        entity = track,
+                    )
+                }
             }
         }
     }

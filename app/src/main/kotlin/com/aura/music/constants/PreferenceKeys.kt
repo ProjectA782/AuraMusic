@@ -182,7 +182,11 @@ val ListenTogetherIsHostKey = booleanPreferencesKey("listenTogetherIsHost")
 val ListenTogetherSessionTimestampKey = longPreferencesKey("listenTogetherSessionTimestamp")
 
 // Spotify Integration
-val EnableSpotifyKey = booleanPreferencesKey("enableSpotify")
+// There used to be an "enableSpotify" master switch here. Logout paths wrote false into
+// it and nothing ever wrote true back, so a single sign-out switched Spotify off across
+// Home, New Releases, search, Library and the Qobuz group with no way to recover it.
+// Spotify is the shell's only content source, so it is no longer switchable off; the
+// per-feature keys below are what gate behaviour now.
 val UseSpotifySearchKey = booleanPreferencesKey("useSpotifySearch")
 val UseSpotifyHomeKey = booleanPreferencesKey("useSpotifyHome")
 val SpotifyHomeOnlyKey = booleanPreferencesKey("spotifyHomeOnly")

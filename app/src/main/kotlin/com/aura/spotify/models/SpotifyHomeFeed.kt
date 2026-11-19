@@ -20,7 +20,7 @@ data class SpotifyHomeFeedSection(
 
 /**
  * One card of a home shelf. The shelf is heterogeneous — a "More like …" row mixes playlists,
- * albums and artists — so the type-agnostic fields live on the base, and [sourceTitle] lets a
+ * albums, artists and songs — so the type-agnostic fields live on the base, and [sourceTitle] lets a
  * caller label a card with a shelf name of its own.
  */
 sealed class SpotifyHomeFeedItem {
@@ -58,6 +58,23 @@ sealed class SpotifyHomeFeedItem {
         override val uri: String,
         override val id: String,
         override val name: String,
+        override val imageUrl: String?,
+        override val sourceTitle: String? = null,
+    ) : SpotifyHomeFeedItem()
+
+    /**
+     * A single song. An anonymous home feeds its biggest shelf this way — Spotify's signed-out
+     * landing page leads with "Trending songs", 20 track cards — so without this variant the
+     * largest shelf of a logged-out Home was the one shelf that could never be shown.
+     * [imageUrl] is the album cover, since a track has no artwork of its own.
+     */
+    data class Track(
+        override val uri: String,
+        override val id: String,
+        override val name: String,
+        val artists: List<SpotifySimpleArtist> = emptyList(),
+        val albumName: String? = null,
+        val durationMs: Int = 0,
         override val imageUrl: String?,
         override val sourceTitle: String? = null,
     ) : SpotifyHomeFeedItem()
