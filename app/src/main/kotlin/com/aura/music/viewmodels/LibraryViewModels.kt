@@ -373,8 +373,13 @@ constructor(
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             _isRefreshing.value = true
-            syncUtils.performFullSyncSuspend()
-            _isRefreshing.value = false
+            try {
+                syncUtils.performFullSyncSuspend()
+            } finally {
+                // A sync that throws would otherwise leave the flag set, and the header button would
+                // spin forever with no way to ask for the refresh again.
+                _isRefreshing.value = false
+            }
         }
     }
 

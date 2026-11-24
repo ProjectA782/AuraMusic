@@ -350,15 +350,22 @@ fun AccountSettings(
             Spacer(Modifier.height(8.dp))
 
             Material3SettingsGroup(
-                items = listOf(
-                    Material3SettingsItem(
-                        title = { Text(stringResource(R.string.switch_youtube_channel)) },
-                        icon = painterResource(R.drawable.account),
-                        onClick = {
-                            onClose()
-                            navController.navigate("switch_channel")
-                        },
-                    ),
+                items = listOfNotNull(
+                    // The television cannot drive YouTube's account chooser - the switch screen is a
+                    // web view with no D-pad path through it - so the shell drops the row rather than
+                    // open a dead end. The touch build keeps it.
+                    if (LocalAuraTvShell.current) {
+                        null
+                    } else {
+                        Material3SettingsItem(
+                            title = { Text(stringResource(R.string.switch_youtube_channel)) },
+                            icon = painterResource(R.drawable.account),
+                            onClick = {
+                                onClose()
+                                navController.navigate("switch_channel")
+                            },
+                        )
+                    },
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.more_content)) },
                         icon = painterResource(R.drawable.cached),

@@ -5,35 +5,27 @@
 
 package com.aura.music.ui.screens.recognition
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import com.aura.music.ui.component.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,40 +33,49 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
 import com.aura.music.LocalDatabase
 import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.R
-import com.aura.music.constants.ThumbnailCornerRadius
 import com.aura.music.db.entities.RecognitionHistory
+import com.aura.music.ui.aura.AuraMock
+import com.aura.music.ui.aura.AuraText
+import com.aura.music.ui.aura.AuraTrackRow
+import com.aura.music.ui.aura.apx
+import com.aura.music.ui.aura.auraPagePadding
+import com.aura.music.ui.aura.auraTrackRows
 import com.aura.music.ui.component.DefaultDialog
 import com.aura.music.ui.component.IconButton
-import com.aura.music.ui.component.LocalMenuState
+import com.aura.music.ui.component.TopAppBar
+import com.aura.music.ui.theme.rememberTvRowNav
 import com.aura.music.ui.utils.backToMain
 import com.aura.music.utils.SearchRoutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
+/**
+ * What the recogniser found, one row per match, in the shell the rest of the rail uses.
+ *
+ * The upstream page was a Material [androidx.compose.material3.Scaffold] over a column of cards: a
+ * tap on a card searched for the track and a trash icon deleted it. Neither control exists on a
+ * television - a card has no focus ring and the icon only answers to touch - so the rows go through
+ * the shell's track list, where the same "more" glyph every other list uses opens the delete
+ * confirmation, and clearing the lot moves to the page header where the remote can reach it.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecognitionHistoryScreen(navController: NavController) {
     val database = LocalDatabase.current
-    val menuState = LocalMenuState.current
     val coroutineScope = rememberCoroutineScope()
 
     val historyItems by database.recognitionHistory().collectAsStateWithLifecycle(initialValue = emptyList())
     var showClearDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<RecognitionHistory?>(null) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm") }
 
     if (showClearDialog) {
         DefaultDialog(
@@ -146,40 +147,72 @@ fun RecognitionHistoryScreen(navController: NavController) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.recognition_history)) },
-                navigationIcon = {
+    val rows = historyItems.map { item ->
+        AuraTrackRow(
+            id = item.id.toString(),
+            title = item.title,
+            subtitle = item.artist,
+            image = item.coverArtUrl,
+            durationText = item.recognizedAt.format(dateFormatter),
+            onClick = {
+                navController.navigate(SearchRoutes.resultRoute("${item.title} ${item.artist}"))
+            },
+            onLongClick = { itemToDelete = item },
+        )
+    }
+
+    val listState = rememberLazyListState()
+    val tvRowNav = rememberTvRowNav(listState)
+    // No named anchor here: a row publishes itself as a landing spot in composition order, so the
+    // top row is the first offer the shell's re-anchor finds, and there is nothing above it to aim at.
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                    ),
+                ),
+    ) {
+        // First child and pinned: emitted after the list this bar became a sibling of it and painted
+        // across the middle of the rows, the same way it did on every page converted before this one.
+        TopAppBar(
+            title = { Text(stringResource(R.string.recognition_history)) },
+            navigationIcon = {
+                IconButton(
+                    onClick = { navController.navigateUp() },
+                    onLongClick = { navController.backToMain() },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.arrow_back),
+                        contentDescription = null,
+                    )
+                }
+            },
+            actions = {
+                if (historyItems.isNotEmpty()) {
                     IconButton(
-                        onClick = { navController.navigateUp() },
-                        onLongClick = { navController.backToMain() },
+                        onClick = { showClearDialog = true },
+                        onLongClick = { showClearDialog = true },
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.arrow_back),
-                            contentDescription = null,
+                            painter = painterResource(R.drawable.clear_all),
+                            contentDescription = stringResource(R.string.clear_recognition_history),
                         )
                     }
-                },
-                actions = {
-                    if (historyItems.isNotEmpty()) {
-                        IconButton(onClick = { showClearDialog = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.clear_all),
-                                contentDescription = stringResource(R.string.clear_recognition_history),
-                            )
-                        }
-                    }
-                },
-            )
-        },
-    ) { paddingValues ->
-        if (historyItems.isEmpty()) {
+                }
+            },
+        )
+
+        if (rows.isEmpty()) {
             Box(
                 modifier =
                     Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = auraPagePadding()),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -188,120 +221,37 @@ fun RecognitionHistoryScreen(navController: NavController) {
                     Icon(
                         painter = painterResource(R.drawable.history),
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        tint = AuraMock.Muted.copy(alpha = 0.5f),
+                        modifier = Modifier.size(96.apx()),
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No recognition history",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(modifier = Modifier.height(24.apx()))
+                    AuraText(
+                        value = "No recognition history",
+                        px = 26,
+                        color = AuraMock.Muted,
                     )
                 }
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier =
                     Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                        .fillMaxWidth()
+                        .weight(1f),
                 contentPadding =
-                    LocalPlayerAwareWindowInsets.current
-                        .only(WindowInsetsSides.Bottom)
-                        .asPaddingValues(),
+                    PaddingValues(
+                        start = auraPagePadding(),
+                        end = auraPagePadding(),
+                        bottom = 132.apx(),
+                    ),
+                verticalArrangement = Arrangement.spacedBy(20.apx()),
             ) {
-                items(
-                    items = historyItems,
-                    key = { "recognition_${it.id}" },
-                ) { item ->
-                    RecognitionHistoryItem(
-                        item = item,
-                        onClick = {
-                            // Search for the track on YouTube Music
-                            val searchQuery = "${item.title} ${item.artist}"
-                            navController.navigate(SearchRoutes.resultRoute(searchQuery))
-                        },
-                        onDelete = {
-                            itemToDelete = item
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecognitionHistoryItem(
-    item: RecognitionHistory,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm") }
-
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .clickable { onClick() },
-        shape = RoundedCornerShape(ThumbnailCornerRadius),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            ),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Album art
-            AsyncImage(
-                model = item.coverArtUrl,
-                contentDescription = null,
-                modifier =
-                    Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-                contentScale = ContentScale.Crop,
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Track info
-            Column(
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = item.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = item.recognizedAt.format(dateFormatter),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                )
-            }
-
-            // Delete action
-            IconButton(onClick = onDelete) {
-                Icon(
-                    painter = painterResource(R.drawable.delete),
-                    contentDescription = stringResource(R.string.delete_from_history),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                auraTrackRows(
+                    rows = rows,
+                    rowNav = tvRowNav,
+                    rowStart = 0,
+                    rowCount = rows.size,
                 )
             }
         }

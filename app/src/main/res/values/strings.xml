@@ -419,4 +419,9 @@
     <string name="spotify_folder_empty">This folder is empty.</string>
     <string name="crash_reporting">Send crash reports</string>
     <string name="crash_reporting_desc">Automatically send anonymous crash and exception details (device model, Android version, app version, stack trace) to help diagnose issues. No account, playlist, or personal data is included.</string>
+
+    <!-- The television guard: the only copy a person sees when this APK is opened on a device it
+         was not built for. Nothing else in the app is reachable from there. -->
+    <string name="aura_tv_only_title">Aura Music runs on Android TV</string>
+    <string name="aura_tv_only_body">This build has no phone interface. Install it on a TV or Google TV device.</string>
 </resources>

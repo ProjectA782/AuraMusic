@@ -63,6 +63,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.aura.music.LocalAuraTvShell
 import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.LocalPlayerConnection
 import com.aura.music.R
@@ -186,13 +187,18 @@ fun SpotifyLikedSongsScreen(
         isRefreshing = isRefreshing,
         onRefresh = viewModel::refresh,
         indicator = {
-            Indicator(
-                isRefreshing = isRefreshing,
-                state = pullRefreshState,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
-            )
+            // The circle is drawn over the first row and only a drag can move it, so on the TV shell
+            // the slot composes nothing. The route has no Aura branch, so this legacy screen is what
+            // the Liked Songs tile opens there.
+            if (!LocalAuraTvShell.current) {
+                Indicator(
+                    isRefreshing = isRefreshing,
+                    state = pullRefreshState,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
+                )
+            }
         },
         modifier = Modifier.fillMaxSize(),
     ) {

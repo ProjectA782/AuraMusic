@@ -1150,25 +1150,30 @@ class HomeViewModel @Inject constructor(
         if (isRefreshing.value) return
         isRefreshing.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            // If a chip is selected, reload the chip's content instead of the default home
-            val currentChip = selectedChip.value
-            if (currentChip != null) {
-                val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-                val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
-                val nextSections = YouTube.home(params = currentChip.endpoint?.params).getOrNull()
-                if (nextSections != null) {
-                    homePage.value = nextSections.copy(
-                        chips = homePage.value?.chips,
-                        sections = nextSections.sections.mapNotNull { section ->
-                            section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
-                        }
-                    )
+            try {
+                // If a chip is selected, reload the chip's content instead of the default home
+                val currentChip = selectedChip.value
+                if (currentChip != null) {
+                    val hideExplicit = context.dataStore.get(HideExplicitKey, false)
+                    val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
+                    val hideYoutubeShorts = context.dataStore.get(HideYoutubeShortsKey, false)
+                    val nextSections = YouTube.home(params = currentChip.endpoint?.params).getOrNull()
+                    if (nextSections != null) {
+                        homePage.value = nextSections.copy(
+                            chips = homePage.value?.chips,
+                            sections = nextSections.sections.mapNotNull { section ->
+                                section.copy(items = section.items.filterOutNulls().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).filterYoutubeShorts(hideYoutubeShorts))
+                            }
+                        )
+                    }
+                } else {
+                    load()
                 }
-            } else {
-                load()
+            } finally {
+                // The header reload button shows this flag as its spinner, so a refresh that throws
+                // has to clear it or the button never comes back.
+                isRefreshing.value = false
             }
-            isRefreshing.value = false
         }
         // Run sync when user manually refreshes
         viewModelScope.launch(Dispatchers.IO) {

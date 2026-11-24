@@ -72,8 +72,13 @@ constructor(
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             _isRefreshing.value = true
-            loadPlaylistInternal()
-            _isRefreshing.value = false
+            try {
+                loadPlaylistInternal()
+            } finally {
+                // Without this a thrown load parks the flag, and the spinner reads as a refresh that
+                // never ends rather than a playlist that failed to load.
+                _isRefreshing.value = false
+            }
         }
     }
 

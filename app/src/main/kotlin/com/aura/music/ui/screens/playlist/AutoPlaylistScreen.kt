@@ -90,6 +90,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.aura.innertube.YouTube
+import com.aura.music.LocalAuraTvShell
 import com.aura.music.LocalDownloadUtil
 import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.LocalPlayerConnection
@@ -479,7 +480,12 @@ fun AutoPlaylistScreen(
 
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
-    val canRefresh = playlistType == PlaylistType.LIKE || playlistType == PlaylistType.UPLOADED
+    // A pull-to-refresh is a drag, and the indicator it parks on is drawn over the first row. Neither
+    // the gesture nor the parked circle can be reached by a remote, so the TV shell gets no refresh
+    // affordance here at all — both the modifier and the Indicator read this one flag.
+    val canRefresh =
+        !LocalAuraTvShell.current &&
+        (playlistType == PlaylistType.LIKE || playlistType == PlaylistType.UPLOADED)
 
     Box(
         modifier =

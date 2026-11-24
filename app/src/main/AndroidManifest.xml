@@ -23,8 +23,10 @@
     <!-- Microphone feature for music recognition (not required) -->
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
-    <!-- Android TV -->
-    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- Android TV. Leanback is required, not optional: this APK is the television product, so
+         stores must stop offering it to phones. Filtering is only half the job — a manual
+         sideload ignores the manifest — so MainActivity re-checks the device class at startup. -->
+    <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <queries>

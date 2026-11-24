@@ -55,8 +55,12 @@ constructor(
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             _isRefreshing.value = true
-            loadLikedSongsInternal()
-            _isRefreshing.value = false
+            try {
+                loadLikedSongsInternal()
+            } finally {
+                // Same reason as the playlist: a failed load must not leave the refresh state on.
+                _isRefreshing.value = false
+            }
         }
     }
 

@@ -6,6 +6,10 @@
 package com.aura.music.ui.screens.library
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.aura.music.ui.theme.rememberGridColumnCount
+import com.aura.music.ui.theme.rememberTvRowNav
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,13 +23,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +71,7 @@ import com.aura.music.constants.YtmSyncKey
 import com.aura.music.extensions.matchesNormalizedQuery
 import com.aura.music.extensions.normalizeForSearch
 import com.aura.music.ui.component.ChipsRow
+import com.aura.music.ui.component.FilterExitChip
 import com.aura.music.ui.component.EmptyPlaceholder
 import com.aura.music.ui.component.LibrarySearchEmptyPlaceholder
 import com.aura.music.ui.component.LibrarySearchHeader
@@ -113,15 +116,9 @@ fun LibraryAlbumsScreen(
     val filterContent = @Composable {
         Row {
             Spacer(Modifier.width(12.dp))
-            FilterChip(
-                label = { Text(stringResource(R.string.albums)) },
-                selected = true,
-                colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surface),
+            FilterExitChip(
+                label = stringResource(R.string.albums),
                 onClick = onDeselect,
-                shape = RoundedCornerShape(16.dp),
-                leadingIcon = {
-                    Icon(painter = painterResource(R.drawable.close), contentDescription = "")
-                },
             )
             ChipsRow(
                 chips =
@@ -161,6 +158,7 @@ fun LibraryAlbumsScreen(
     }
 
     val lazyListState = rememberLazyListState()
+    val tvRowNav = rememberTvRowNav(lazyListState)
     val lazyGridState = rememberLazyGridState()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
@@ -286,11 +284,15 @@ fun LibraryAlbumsScreen(
                                 }
                             }
                         }
-                        items(
+                        itemsIndexed(
                             items = albums,
-                            key = { it.id },
-                            contentType = { CONTENT_TYPE_ALBUM },
-                        ) { album ->
+                            key = { _, album -> album.id },
+                            contentType = { _, _ -> CONTENT_TYPE_ALBUM },
+                        ) { index, album ->
+                            // The chain covers the tiles only. The filter row and the sort band above
+                            // it are not counted stops: UP from the first row is handed back there,
+                            // and the search's own focus search picks whichever control of the band is
+                            // currently composed.
                             LibraryAlbumListItem(
                                 menuState = menuState,
                                 album = album,
@@ -298,6 +300,18 @@ fun LibraryAlbumsScreen(
                                 isPlaying = isPlaying,
                                 modifier =
                                     Modifier
+                                        // The nav's requester has to sit above the clickable: it
+                                        // resolves by walking toward the inner modifiers, so a tile
+                                        // chained after the focusable finds nothing to light.
+                                        .then(
+                                            tvRowNav.row(
+                                                index = index,
+                                                itemKey = album.id,
+                                                rowCount = albums.size,
+                                            ),
+                                        )
+                                        .focusGroup()
+                                        .then(tvRowNav.tile(index, 0))
                                         .animateItem(),
                             )
                         }
@@ -306,6 +320,11 @@ fun LibraryAlbumsScreen(
             }
 
             LibraryViewType.GRID -> {
+                // The tab lands here on the TV, so the grid carries the chain the list branch has:
+                // one lane of cells is one row of it, and the grid's own column count names them.
+                val tvGridNav = rememberTvRowNav(lazyGridState)
+                val gridColumns = rememberGridColumnCount(lazyGridState)
+                val gridRows = (filteredAlbums.size + gridColumns - 1) / gridColumns
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
@@ -344,11 +363,11 @@ fun LibraryAlbumsScreen(
                                 }
                             }
                         }
-                        items(
+                        itemsIndexed(
                             items = albums,
-                            key = { it.id },
-                            contentType = { CONTENT_TYPE_ALBUM },
-                        ) { album ->
+                            key = { _, album -> album.id },
+                            contentType = { _, _ -> CONTENT_TYPE_ALBUM },
+                        ) { index, album ->
                             LibraryAlbumGridItem(
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
@@ -357,6 +376,14 @@ fun LibraryAlbumsScreen(
                                 isPlaying = isPlaying,
                                 modifier =
                                     Modifier
+                                        .then(
+                                            tvGridNav.row(
+                                                index = index / gridColumns,
+                                                itemKey = album.id,
+                                                rowCount = gridRows,
+                                            ),
+                                        )
+                                        .then(tvGridNav.tile(index / gridColumns, index % gridColumns))
                                         .animateItem(),
                             )
                         }

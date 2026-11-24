@@ -9,6 +9,8 @@ import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
+import com.aura.music.ui.theme.rememberTvRowNav
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,9 +27,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +66,7 @@ import com.aura.music.LocalDatabase
 import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.LocalPlayerConnection
 import com.aura.music.LocalSyncUtils
+import com.aura.music.LocalAuraTvShell
 import com.aura.music.R
 import com.aura.music.constants.CONTENT_TYPE_HEADER
 import com.aura.music.constants.CONTENT_TYPE_SONG
@@ -79,7 +81,12 @@ import com.aura.music.db.entities.PodcastEntity
 import com.aura.music.db.entities.SpeedDialItem
 import com.aura.music.extensions.toMediaItem
 import com.aura.music.playback.queues.ListQueue
+import com.aura.music.ui.aura.AuraMock
+import com.aura.music.ui.aura.AuraPillButton
+import com.aura.music.ui.aura.apx
+import com.aura.music.ui.aura.auraFocused
 import com.aura.music.ui.component.ChipsRow
+import com.aura.music.ui.component.FilterExitChip
 import com.aura.music.ui.component.HideOnScrollFAB
 import com.aura.music.ui.component.LocalMenuState
 import com.aura.music.ui.component.Material3MenuGroup
@@ -141,6 +148,7 @@ fun LibraryPodcastsScreen(
     }
 
     val lazyListState = rememberLazyListState()
+    val tvRowNav = rememberTvRowNav(lazyListState)
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
@@ -156,22 +164,38 @@ fun LibraryPodcastsScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
+    // A pull is a touch gesture the remote cannot make, so under the TV shell neither the gesture nor
+    // the indicator it hangs over the first row is composed at all. The reload moves to the header.
+    val isTvShell = LocalAuraTvShell.current
+
+    val refreshPodcasts: () -> Unit = {
+        if (!isRefreshing) {
+            isRefreshing = true
+            coroutineScope.launch {
+                // Without this the failure path leaves the flag set, and a spinner that never stops
+                // looks exactly like a refresh nobody asked for and cannot dismiss.
+                try {
+                    viewModel.refreshAll()
+                } finally {
+                    isRefreshing = false
+                }
+            }
+        }
+    }
 
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .pullToRefresh(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        if (!isRefreshing) {
-                            isRefreshing = true
-                            coroutineScope.launch {
-                                viewModel.refreshAll()
-                                isRefreshing = false
-                            }
-                        }
+                .then(
+                    if (isTvShell) {
+                        Modifier
+                    } else {
+                        Modifier.pullToRefresh(
+                            state = pullToRefreshState,
+                            isRefreshing = isRefreshing,
+                            onRefresh = refreshPodcasts,
+                        )
                     },
                 ),
     ) {
@@ -179,23 +203,28 @@ fun LibraryPodcastsScreen(
         val chipsHeader = @Composable {
             Row {
                 Spacer(Modifier.width(12.dp))
-                FilterChip(
-                    label = { Text(stringResource(R.string.filter_podcasts)) },
-                    selected = true,
-                    colors =
-                        FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
+                FilterExitChip(
+                    label = stringResource(R.string.filter_podcasts),
                     onClick = onDeselect,
-                    shape = RoundedCornerShape(16.dp),
-                    border = null,
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(R.drawable.close),
-                            contentDescription = stringResource(R.string.close_chip),
-                        )
-                    },
                 )
+                // Shuffle of the downloaded episodes lived in a floating button no remote can reach.
+                if (LocalAuraTvShell.current &&
+                    podcastFilter == PodcastFilter.DOWNLOADED &&
+                    downloadedEpisodes.isNotEmpty()
+                ) {
+                    AuraPillButton(
+                        label = stringResource(R.string.shuffle),
+                        icon = R.drawable.aura_ic_shuffle,
+                        onClick = {
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = downloadedEpisodesStr,
+                                    items = downloadedEpisodes.shuffled().map { it.toMediaItem() },
+                                ),
+                            )
+                        },
+                    )
+                }
                 ChipsRow(
                     chips =
                         listOf(
@@ -207,6 +236,34 @@ fun LibraryPodcastsScreen(
                     onValueUpdate = { podcastFilter = it },
                     modifier = Modifier.weight(1f),
                 )
+                if (isTvShell) {
+                    // The control Home and Your Library already put in their title row, so reloading
+                    // this tab is one press instead of a gesture no remote can make.
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .padding(start = 12.dp, end = 12.dp)
+                            .auraFocused()
+                            .size(72.apx())
+                            .clip(CircleShape)
+                            .clickable(onClick = refreshPodcasts),
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(36.apx()),
+                                strokeWidth = 3.apx(),
+                                color = AuraMock.Primary,
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.aura_ic_refresh_cw),
+                                contentDescription = null,
+                                tint = AuraMock.Muted,
+                                modifier = Modifier.size(36.apx()),
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -251,7 +308,10 @@ fun LibraryPodcastsScreen(
                         items = subscribedChannels,
                         key = { _, item -> item.id },
                         contentType = { _, _ -> CONTENT_TYPE_SONG },
-                    ) { _, podcast ->
+                    ) { index, podcast ->
+                        // The two auto-playlist cards above are not counted stops: they own their own
+                        // focus target, and UP from the first row is handed back to the search's focus
+                        // search, which reaches whichever of them is composed.
                         PodcastEpisodePlaylistItem(
                             podcast = podcast,
                             onClick = { navController.navigate("online_podcast/${podcast.id}") },
@@ -267,6 +327,15 @@ fun LibraryPodcastsScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
+                                    .then(
+                                        tvRowNav.row(
+                                            index = index,
+                                            itemKey = podcast.id,
+                                            rowCount = subscribedChannels.size,
+                                        ),
+                                    )
+                                    .focusGroup()
+                                    .then(tvRowNav.tile(index, 0))
                                     .animateItem(),
                         )
                     }
@@ -308,16 +377,28 @@ fun LibraryPodcastsScreen(
                         items = podcastChannels,
                         key = { _, item -> item.id },
                         contentType = { _, _ -> CONTENT_TYPE_SONG },
-                    ) { _, channel ->
+                    ) { index, channel ->
                         PodcastArtistChannelItem(
                             thumbnailUrl = channel.thumbnail,
                             channelName = channel.title,
                             modifier =
                                 Modifier
+                                    // Above the clickable, so the requester resolves the focusable
+                                    // rather than walking past it into nothing.
+                                    .then(
+                                        tvRowNav.row(
+                                            index = index,
+                                            itemKey = channel.id,
+                                            rowCount = podcastChannels.size,
+                                        ),
+                                    )
+                                    .focusGroup()
+                                    .then(tvRowNav.tile(index, 0))
                                     .fillMaxWidth()
                                     .clickable {
                                         navController.navigate("artist/${channel.id}")
-                                    }.animateItem(),
+                                    }
+                                    .animateItem(),
                         )
                     }
 
@@ -418,6 +499,7 @@ fun LibraryPodcastsScreen(
                                             )
                                         }
                                     },
+                                    modifier = tvRowNav.tile(index, 1),
                                 ) {
                                 Icon(
                                     painter = painterResource(R.drawable.more_vert),
@@ -427,6 +509,17 @@ fun LibraryPodcastsScreen(
                             },
                             modifier =
                                 Modifier
+                                    // Above the clickable, so the requester resolves the focusable
+                                    // rather than walking past it into nothing.
+                                    .then(
+                                        tvRowNav.row(
+                                            index = index,
+                                            itemKey = "${episode.song.id}_$index",
+                                            rowCount = downloadedEpisodes.size,
+                                        ),
+                                    )
+                                    .focusGroup()
+                                    .then(tvRowNav.tile(index, 0))
                                     .fillMaxWidth()
                                     .clickable {
                                         if (episode.id == mediaMetadata?.id) {
@@ -440,7 +533,8 @@ fun LibraryPodcastsScreen(
                                                 ),
                                             )
                                         }
-                                    }.animateItem(),
+                                    }
+                                    .animateItem(),
                         )
                     }
 
@@ -463,30 +557,35 @@ fun LibraryPodcastsScreen(
                     }
                 }
 
-                HideOnScrollFAB(
-                    visible = downloadedEpisodes.isNotEmpty(),
-                    lazyListState = lazyListState,
-                    icon = R.drawable.shuffle,
-                    onClick = {
-                        playerConnection.playQueue(
-                            ListQueue(
-                                title = downloadedEpisodesStr,
-                                items = downloadedEpisodes.shuffled().map { it.toMediaItem() },
-                            ),
-                        )
-                    },
-                )
+                // A floating button is a touch affordance; on the shell shuffle sits in the chip band.
+                if (!LocalAuraTvShell.current) {
+                    HideOnScrollFAB(
+                        visible = downloadedEpisodes.isNotEmpty(),
+                        lazyListState = lazyListState,
+                        icon = R.drawable.shuffle,
+                        onClick = {
+                            playerConnection.playQueue(
+                                ListQueue(
+                                    title = downloadedEpisodesStr,
+                                    items = downloadedEpisodes.shuffled().map { it.toMediaItem() },
+                                ),
+                            )
+                        },
+                    )
+                }
             }
         }
 
-        Indicator(
-            isRefreshing = isRefreshing,
-            state = pullToRefreshState,
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
-        )
+        if (!isTvShell) {
+            Indicator(
+                isRefreshing = isRefreshing,
+                state = pullToRefreshState,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
+            )
+        }
     }
 }
 

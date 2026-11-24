@@ -91,14 +91,19 @@ constructor(
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             _isRefreshing.value = true
-            when (playlist) {
-                "liked" -> {
-                    syncUtils.syncLikedSongsSuspend()
-                    syncUtils.syncSpotifyLikedSongsSuspend()
+            try {
+                when (playlist) {
+                    "liked" -> {
+                        syncUtils.syncLikedSongsSuspend()
+                        syncUtils.syncSpotifyLikedSongsSuspend()
+                    }
+                    "uploaded" -> syncUtils.syncUploadedSongsSuspend()
                 }
-                "uploaded" -> syncUtils.syncUploadedSongsSuspend()
+            } finally {
+                // A sync that throws would otherwise leave this parked, and the screen would show a
+                // refresh nobody asked for and cannot dismiss.
+                _isRefreshing.value = false
             }
-            _isRefreshing.value = false
         }
     }
 }

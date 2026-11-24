@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -51,6 +52,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.aura.innertube.utils.parseCookieString
 import com.aura.music.LocalPlayerAwareWindowInsets
+import com.aura.music.LocalAuraTvShell
 import com.aura.music.R
 import com.aura.music.constants.CONTENT_TYPE_HEADER
 import com.aura.music.constants.CONTENT_TYPE_PLAYLIST
@@ -73,6 +75,7 @@ import com.aura.music.constants.ShowUploadedPlaylistKey
 import com.aura.music.constants.YtmSyncKey
 import com.aura.music.db.entities.Playlist
 import com.aura.music.db.entities.PlaylistEntity
+import com.aura.music.ui.aura.AuraPillButton
 import com.aura.music.ui.component.CreatePlaylistDialog
 import com.aura.music.ui.component.HideOnScrollFAB
 import com.aura.music.ui.component.LibrarySearchEmptyPlaceholder
@@ -85,6 +88,8 @@ import com.aura.music.ui.component.PlaylistListItem
 import com.aura.music.ui.component.SortHeader
 import com.aura.music.ui.component.SpotifyFolderGridItem
 import com.aura.music.ui.component.SpotifyFolderListItem
+import com.aura.music.ui.theme.rememberGridColumnCount
+import com.aura.music.ui.theme.rememberTvRowNav
 import com.aura.music.extensions.matchesNormalizedQuery
 import com.aura.music.extensions.normalizeForSearch
 import com.aura.music.utils.rememberEnumPreference
@@ -395,6 +400,17 @@ fun LibraryPlaylistsScreen(
                 color = MaterialTheme.colorScheme.secondary,
             )
 
+            // Creating a playlist lived in a floating button that only a finger could reach; on the shell
+            // the same dialog opens from a stop in the header row.
+            if (LocalAuraTvShell.current) {
+                AuraPillButton(
+                    label = stringResource(R.string.create_playlist),
+                    icon = R.drawable.add,
+                    modifier = Modifier.padding(start = 20.dp),
+                    onClick = { showCreatePlaylistDialog = true },
+                )
+            }
+
             IconButton(
                 onClick = { isSearchActive = true },
                 modifier = Modifier.padding(start = 8.dp).size(40.dp),
@@ -684,16 +700,34 @@ fun LibraryPlaylistsScreen(
                     }
                 }
 
-                HideOnScrollFAB(
-                    lazyListState = lazyListState,
-                    icon = R.drawable.add,
-                    onClick = {
-                        showCreatePlaylistDialog = true
-                    },
-                )
+                if (!LocalAuraTvShell.current) {
+                    HideOnScrollFAB(
+                        lazyListState = lazyListState,
+                        icon = R.drawable.add,
+                        onClick = {
+                            showCreatePlaylistDialog = true
+                        },
+                    )
+                }
             }
 
             LibraryViewType.GRID -> {
+                // The tab lands here on the TV, so the grid carries the chain the list branch has:
+                // one lane of cells is one row of it, and the grid's own column count names them.
+                val tvGridNav = rememberTvRowNav(lazyGridState)
+                val gridColumns = rememberGridColumnCount(lazyGridState)
+                val showsSpotifyLoadError =
+                    isSpotifyActive && !needsSpotifyReLogin && isUsingFallback && spotifyPlaylists.isEmpty()
+                val showsSpotifyLiked = isSpotifyActive && spotifyLikedSongsTotal > 0
+                val gridCells = visibleResults.size +
+                    (if (showsSpotifyLiked) 1 else 0) +
+                    (if (isSpotifyActive) spotifyFolders.size else 0) +
+                    (if (isSpotifyActive) spotifyPlaylists.size else 0)
+                val gridRows = (gridCells + gridColumns - 1) / gridColumns
+                // Which lane each block starts on, counted while the grid's content composes: the
+                // grid packs cells straight on, so a block following another mid-row continues that
+                // row, and a full-width band between them starts the next row fresh.
+                var cellBase = 0
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
@@ -732,11 +766,14 @@ fun LibraryPlaylistsScreen(
                         }
                     }
 
-                    items(
+                    val visibleStart = cellBase
+                    cellBase += visibleResults.size
+                    itemsIndexed(
                         items = visibleResults,
-                        key = { it.key },
-                        contentType = { CONTENT_TYPE_PLAYLIST },
-                    ) { item ->
+                        key = { _, item -> item.key },
+                        contentType = { _, _ -> CONTENT_TYPE_PLAYLIST },
+                    ) { index, item ->
+                        val cell = visibleStart + index
                         if (item.autoPlaylist) {
                             PlaylistGridItem(
                                 playlist = item.playlist,
@@ -744,6 +781,16 @@ fun LibraryPlaylistsScreen(
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
+                                        // Above the clickable, so the requester resolves the
+                                        // focusable rather than walking past it into nothing.
+                                        .then(
+                                            tvGridNav.row(
+                                                index = cell / gridColumns,
+                                                itemKey = item.key,
+                                                rowCount = gridRows,
+                                            ),
+                                        )
+                                        .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                         .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
@@ -757,13 +804,22 @@ fun LibraryPlaylistsScreen(
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
                                 playlist = item.playlist,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = cell / gridColumns,
+                                            itemKey = item.key,
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
+                                    .animateItem(),
                             )
                         }
                     }
 
                     // Spotify playlists failed to load banner (grid)
-                    if (isSpotifyActive && !needsSpotifyReLogin && isUsingFallback && spotifyPlaylists.isEmpty()) {
+                    if (showsSpotifyLoadError) {
                         item(
                             key = "spotify_load_error_banner",
                             span = { GridItemSpan(maxLineSpan) },
@@ -807,8 +863,15 @@ fun LibraryPlaylistsScreen(
                         }
                     }
 
+                    // The band is full-width, so the cells after it start on a fresh lane row.
+                    if (showsSpotifyLoadError) {
+                        cellBase = ((cellBase + gridColumns - 1) / gridColumns) * gridColumns
+                    }
+
                     // Spotify Liked Songs as a special playlist entry (grid)
-                    if (isSpotifyActive && spotifyLikedSongsTotal > 0) {
+                    if (showsSpotifyLiked) {
+                        val likedCell = cellBase
+                        cellBase += 1
                         item(key = "spotify_liked_songs") {
                             val likedSongsName = stringResource(R.string.spotify_liked_songs)
                             PlaylistGridItem(
@@ -824,6 +887,14 @@ fun LibraryPlaylistsScreen(
                                 fillMaxWidth = true,
                                 autoPlaylist = true,
                                 modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = likedCell / gridColumns,
+                                            itemKey = "spotify_liked_songs",
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(likedCell / gridColumns, likedCell % gridColumns))
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
@@ -848,17 +919,28 @@ fun LibraryPlaylistsScreen(
 
                     // Spotify folders rendered above playlists in grid view
                     if (isSpotifyActive && spotifyFolders.isNotEmpty()) {
-                        items(
+                        val folderStart = cellBase
+                        cellBase += spotifyFolders.size
+                        itemsIndexed(
                             items = spotifyFolders,
-                            key = { "spotify_folder_${it.uri}" },
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) { folder ->
+                            key = { _, folder -> "spotify_folder_${folder.uri}" },
+                            contentType = { _, _ -> CONTENT_TYPE_PLAYLIST },
+                        ) { index, folder ->
                             val encodedUri = java.net.URLEncoder.encode(folder.uri, Charsets.UTF_8.name())
                             val encodedName = java.net.URLEncoder.encode(folder.name, Charsets.UTF_8.name())
+                            val cell = folderStart + index
                             SpotifyFolderGridItem(
                                 folder = folder,
                                 fillMaxWidth = true,
                                 modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = cell / gridColumns,
+                                            itemKey = "spotify_folder_${folder.uri}",
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                     .fillMaxWidth()
                                     .clickable {
                                         navController.navigate("spotify_folder/$encodedUri?name=$encodedName")
@@ -870,11 +952,14 @@ fun LibraryPlaylistsScreen(
 
                     // Spotify playlists in grid view
                     if (isSpotifyActive && spotifyPlaylists.isNotEmpty()) {
-                        items(
+                        val spotifyStart = cellBase
+                        cellBase += spotifyPlaylists.size
+                        itemsIndexed(
                             items = spotifyPlaylists,
-                            key = { "spotify_${it.id}" },
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) { spotifyPlaylist ->
+                            key = { _, spotifyPlaylist -> "spotify_${spotifyPlaylist.id}" },
+                            contentType = { _, _ -> CONTENT_TYPE_PLAYLIST },
+                        ) { index, spotifyPlaylist ->
+                            val cell = spotifyStart + index
                             val thumbnailUrl = SpotifyMapper.getPlaylistThumbnail(spotifyPlaylist)
                             PlaylistGridItem(
                                 playlist = Playlist(
@@ -889,6 +974,14 @@ fun LibraryPlaylistsScreen(
                                 fillMaxWidth = true,
                                 autoPlaylist = true,
                                 modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = cell / gridColumns,
+                                            itemKey = "spotify_${spotifyPlaylist.id}",
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
@@ -911,13 +1004,15 @@ fun LibraryPlaylistsScreen(
                     }
                 }
 
-                HideOnScrollFAB(
-                    lazyListState = lazyGridState,
-                    icon = R.drawable.add,
-                    onClick = {
-                        showCreatePlaylistDialog = true
-                    },
-                )
+                if (!LocalAuraTvShell.current) {
+                    HideOnScrollFAB(
+                        lazyListState = lazyGridState,
+                        icon = R.drawable.add,
+                        onClick = {
+                            showCreatePlaylistDialog = true
+                        },
+                    )
+                }
             }
         }
     }

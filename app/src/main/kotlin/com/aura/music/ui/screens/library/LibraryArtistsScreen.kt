@@ -6,6 +6,10 @@
 package com.aura.music.ui.screens.library
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.aura.music.ui.theme.rememberGridColumnCount
+import com.aura.music.ui.theme.rememberTvRowNav
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,13 +23,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +66,7 @@ import com.aura.music.constants.GridThumbnailHeight
 import com.aura.music.constants.LibraryViewType
 import com.aura.music.constants.YtmSyncKey
 import com.aura.music.ui.component.ChipsRow
+import com.aura.music.ui.component.FilterExitChip
 import com.aura.music.ui.component.LibraryArtistGridItem
 import com.aura.music.ui.component.LibraryArtistListItem
 import com.aura.music.ui.component.LibrarySearchEmptyPlaceholder
@@ -101,15 +104,9 @@ fun LibraryArtistsScreen(
     val filterContent = @Composable {
         Row {
             Spacer(Modifier.width(12.dp))
-            FilterChip(
-                label = { Text(stringResource(R.string.artists)) },
-                selected = true,
-                colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surface),
+            FilterExitChip(
+                label = stringResource(R.string.artists),
                 onClick = onDeselect,
-                shape = RoundedCornerShape(16.dp),
-                leadingIcon = {
-                    Icon(painter = painterResource(R.drawable.close), contentDescription = "")
-                },
             )
             ChipsRow(
                 chips =
@@ -140,6 +137,7 @@ fun LibraryArtistsScreen(
     val filteredArtists by viewModel.filteredArtists.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
+    val tvRowNav = rememberTvRowNav(lazyListState)
     val lazyGridState = rememberLazyGridState()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
@@ -271,22 +269,42 @@ fun LibraryArtistsScreen(
                             }
                         }
 
-                        items(
+                        itemsIndexed(
                             items = artists,
-                            key = { it.id },
-                            contentType = { CONTENT_TYPE_ARTIST },
-                        ) { artist ->
+                            key = { _, artist -> artist.id },
+                            contentType = { _, _ -> CONTENT_TYPE_ARTIST },
+                        ) { index, artist ->
+                            // The chain covers the tiles only. The filter row and the sort band above
+                            // it are not counted stops: UP from the first row is handed back there,
+                            // and the search's own focus search picks whichever control of the band is
+                            // currently composed.
                             LibraryArtistListItem(
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
-                                modifier = Modifier.animateItem(),
-                                artist = artist
+                                modifier =
+                                    Modifier
+                                        .then(
+                                            tvRowNav.row(
+                                                index = index,
+                                                itemKey = artist.id,
+                                                rowCount = artists.size,
+                                            ),
+                                        )
+                                        .focusGroup()
+                                        .then(tvRowNav.tile(index, 0))
+                                        .animateItem(),
+                                artist = artist,
                             )
                         }
                     }
                 }
 
-            LibraryViewType.GRID ->
+            LibraryViewType.GRID -> {
+                // The tab lands here on the TV, so the grid carries the chain the list branch has:
+                // one lane of cells is one row of it, and the grid's own column count names them.
+                val tvGridNav = rememberTvRowNav(lazyGridState)
+                val gridColumns = rememberGridColumnCount(lazyGridState)
+                val gridRows = (filteredArtists.size + gridColumns - 1) / gridColumns
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
@@ -330,20 +348,30 @@ fun LibraryArtistsScreen(
                             }
                         }
 
-                        items(
+                        itemsIndexed(
                             items = artists,
-                            key = { it.id },
-                            contentType = { CONTENT_TYPE_ARTIST },
-                        ) { artist ->
+                            key = { _, artist -> artist.id },
+                            contentType = { _, _ -> CONTENT_TYPE_ARTIST },
+                        ) { index, artist ->
                             LibraryArtistGridItem(
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = index / gridColumns,
+                                            itemKey = artist.id,
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(index / gridColumns, index % gridColumns))
+                                    .animateItem(),
                                 artist = artist
                             )
                         }
                     }
                 }
+            }
         }
     }
 }

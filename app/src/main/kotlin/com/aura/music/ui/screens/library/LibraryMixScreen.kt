@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -100,6 +101,8 @@ import com.aura.music.ui.component.SortHeader
 import com.aura.music.ui.theme.AuraMetrics
 import com.aura.music.ui.theme.AuraOnSurfaceVariant
 import com.aura.music.ui.theme.AuraTextPrimary
+import com.aura.music.ui.theme.rememberGridColumnCount
+import com.aura.music.ui.theme.rememberTvRowNav
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
@@ -891,6 +894,28 @@ fun LibraryMixScreen(
             }
 
             LibraryViewType.GRID -> {
+                // The tab lands here on the TV, so the grid carries the chain the list branch has:
+                // one lane of cells is one row of it, and the grid's own column count names them.
+                val tvGridNav = rememberTvRowNav(lazyGridState)
+                val gridColumns = rememberGridColumnCount(lazyGridState)
+                val showsSpotifyLiked = isSpotifyActive && spotifyLikedSongsTotal > 0
+                // Every optional auto-playlist card is one cell when its own toggle is on.
+                val autoCells =
+                    (if (showLikedPlaylist && !hideYtmLiked) 1 else 0) +
+                    (if (showDownloadedPlaylist) 1 else 0) +
+                    (if (showCachedPlaylists) 1 else 0) +
+                    (if (showTopPlaylists) 1 else 0) +
+                    (if (showUploadedPlaylists) 1 else 0)
+                val gridCells =
+                    autoCells +
+                    (if (showsSpotifyLiked) 1 else 0) +
+                    (if (isSpotifyActive) spotifyPlaylists.size else 0) +
+                    filteredItems.size
+                val gridRows = (gridCells + gridColumns - 1) / gridColumns
+                // Which lane each cell lands on, counted while the grid's content composes: the grid
+                // packs cells straight on, so a block following another mid-row continues that row,
+                // and a full-width band between them starts the next lane row fresh.
+                var cellBase = 0
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
@@ -927,6 +952,8 @@ fun LibraryMixScreen(
                     }
 
                     if (showLikedPlaylist && !hideYtmLiked) {
+                        val likedCell = cellBase
+                        cellBase += 1
                         item(
                             key = "likedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -937,6 +964,17 @@ fun LibraryMixScreen(
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
+                                        // Above the clickable: the requester resolves by walking the
+                                        // chain toward the inner modifiers, so chained after the
+                                        // focusable it finds nothing to light.
+                                        .then(
+                                            tvGridNav.row(
+                                                index = likedCell / gridColumns,
+                                                itemKey = "likedPlaylist",
+                                                rowCount = gridRows,
+                                            ),
+                                        )
+                                        .then(tvGridNav.tile(likedCell / gridColumns, likedCell % gridColumns))
                                         .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
@@ -948,6 +986,8 @@ fun LibraryMixScreen(
                     }
 
                     if (showDownloadedPlaylist) {
+                        val downloadedCell = cellBase
+                        cellBase += 1
                         item(
                             key = "downloadedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -958,6 +998,14 @@ fun LibraryMixScreen(
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
+                                        .then(
+                                            tvGridNav.row(
+                                                index = downloadedCell / gridColumns,
+                                                itemKey = "downloadedPlaylist",
+                                                rowCount = gridRows,
+                                            ),
+                                        )
+                                        .then(tvGridNav.tile(downloadedCell / gridColumns, downloadedCell % gridColumns))
                                         .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
@@ -970,6 +1018,8 @@ fun LibraryMixScreen(
                     }
 
                     if (showCachedPlaylists) {
+                        val cachedCell = cellBase
+                        cellBase += 1
                         item(
                             key = "cachedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -980,6 +1030,14 @@ fun LibraryMixScreen(
                                 autoPlaylist = true,
                                 modifier =
                                 Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = cachedCell / gridColumns,
+                                            itemKey = "cachedPlaylist",
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(cachedCell / gridColumns, cachedCell % gridColumns))
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
@@ -992,6 +1050,8 @@ fun LibraryMixScreen(
                     }
 
                     if (showTopPlaylists) {
+                        val topCell = cellBase
+                        cellBase += 1
                         item(
                             key = "TopPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -1002,6 +1062,14 @@ fun LibraryMixScreen(
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
+                                        .then(
+                                            tvGridNav.row(
+                                                index = topCell / gridColumns,
+                                                itemKey = "TopPlaylist",
+                                                rowCount = gridRows,
+                                            ),
+                                        )
+                                        .then(tvGridNav.tile(topCell / gridColumns, topCell % gridColumns))
                                         .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
@@ -1013,6 +1081,8 @@ fun LibraryMixScreen(
                     }
 
                     if (showUploadedPlaylists) {
+                        val uploadedCell = cellBase
+                        cellBase += 1
                         item(
                             key = "uploadedPlaylist",
                             contentType = { CONTENT_TYPE_PLAYLIST },
@@ -1023,6 +1093,14 @@ fun LibraryMixScreen(
                                 autoPlaylist = true,
                                 modifier =
                                     Modifier
+                                        .then(
+                                            tvGridNav.row(
+                                                index = uploadedCell / gridColumns,
+                                                itemKey = "uploadedPlaylist",
+                                                rowCount = gridRows,
+                                            ),
+                                        )
+                                        .then(tvGridNav.tile(uploadedCell / gridColumns, uploadedCell % gridColumns))
                                         .fillMaxWidth()
                                         .clickable {
                                             navController.navigate("auto_playlist/uploaded")
@@ -1040,9 +1118,13 @@ fun LibraryMixScreen(
                                 navController.navigate("settings/spotify/login")
                             }
                         }
+                        // The band is full-width, so the cells after it start on a fresh lane row.
+                        cellBase = ((cellBase + gridColumns - 1) / gridColumns) * gridColumns
                     }
 
-                    if (isSpotifyActive && spotifyLikedSongsTotal > 0) {
+                    if (showsSpotifyLiked) {
+                        val spotifyLikedCell = cellBase
+                        cellBase += 1
                         item(key = "spotify_liked_songs") {
                             val likedSongsName = stringResource(R.string.spotify_liked_songs)
                             PlaylistGridItem(
@@ -1058,6 +1140,19 @@ fun LibraryMixScreen(
                                 fillMaxWidth = true,
                                 autoPlaylist = true,
                                 modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = spotifyLikedCell / gridColumns,
+                                            itemKey = "spotify_liked_songs",
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(
+                                        tvGridNav.tile(
+                                            spotifyLikedCell / gridColumns,
+                                            spotifyLikedCell % gridColumns,
+                                        ),
+                                    )
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
@@ -1081,11 +1176,14 @@ fun LibraryMixScreen(
                     }
 
                     if (isSpotifyActive && spotifyPlaylists.isNotEmpty()) {
-                        items(
+                        val spotifyStart = cellBase
+                        cellBase += spotifyPlaylists.size
+                        itemsIndexed(
                             items = spotifyPlaylists,
-                            key = { "spotify_${it.id}" },
-                            contentType = { CONTENT_TYPE_PLAYLIST },
-                        ) { spotifyPlaylist ->
+                            key = { _, spotifyPlaylist -> "spotify_${spotifyPlaylist.id}" },
+                            contentType = { _, _ -> CONTENT_TYPE_PLAYLIST },
+                        ) { index, spotifyPlaylist ->
+                            val cell = spotifyStart + index
                             val thumbnailUrl = SpotifyMapper.getPlaylistThumbnail(spotifyPlaylist)
                             PlaylistGridItem(
                                 playlist = Playlist(
@@ -1100,6 +1198,14 @@ fun LibraryMixScreen(
                                 fillMaxWidth = true,
                                 autoPlaylist = true,
                                 modifier = Modifier
+                                    .then(
+                                        tvGridNav.row(
+                                            index = cell / gridColumns,
+                                            itemKey = "spotify_${spotifyPlaylist.id}",
+                                            rowCount = gridRows,
+                                        ),
+                                    )
+                                    .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
@@ -1121,11 +1227,14 @@ fun LibraryMixScreen(
                         }
                     }
 
-                    items(
+                    val mixStart = cellBase
+                    cellBase += filteredItems.size
+                    itemsIndexed(
                         items = filteredItems,
-                        key = { it.id },
-                        contentType = { CONTENT_TYPE_PLAYLIST },
-                    ) { item ->
+                        key = { _, mixItem -> mixItem.id },
+                        contentType = { _, _ -> CONTENT_TYPE_PLAYLIST },
+                    ) { index, item ->
+                        val cell = mixStart + index
                         when (item) {
                             is Playlist -> {
                                 PlaylistGridItem(
@@ -1133,6 +1242,14 @@ fun LibraryMixScreen(
                                     fillMaxWidth = true,
                                     modifier =
                                         Modifier
+                                            .then(
+                                                tvGridNav.row(
+                                                    index = cell / gridColumns,
+                                                    itemKey = item.id,
+                                                    rowCount = gridRows,
+                                                ),
+                                            )
+                                            .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                             .fillMaxWidth()
                                             .combinedClickable(
                                                 onClick = {
@@ -1167,6 +1284,14 @@ fun LibraryMixScreen(
                                     fillMaxWidth = true,
                                     modifier =
                                         Modifier
+                                            .then(
+                                                tvGridNav.row(
+                                                    index = cell / gridColumns,
+                                                    itemKey = item.id,
+                                                    rowCount = gridRows,
+                                                ),
+                                            )
+                                            .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                             .fillMaxWidth()
                                             .combinedClickable(
                                                 onClick = {
@@ -1203,6 +1328,14 @@ fun LibraryMixScreen(
                                     fillMaxWidth = true,
                                     modifier =
                                         Modifier
+                                            .then(
+                                                tvGridNav.row(
+                                                    index = cell / gridColumns,
+                                                    itemKey = item.id,
+                                                    rowCount = gridRows,
+                                                ),
+                                            )
+                                            .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                             .fillMaxWidth()
                                             .combinedClickable(
                                                 onClick = {
@@ -1231,6 +1364,14 @@ fun LibraryMixScreen(
                                     fillMaxWidth = true,
                                     modifier =
                                         Modifier
+                                            .then(
+                                                tvGridNav.row(
+                                                    index = cell / gridColumns,
+                                                    itemKey = item.id,
+                                                    rowCount = gridRows,
+                                                ),
+                                            )
+                                            .then(tvGridNav.tile(cell / gridColumns, cell % gridColumns))
                                             .fillMaxWidth()
                                             .combinedClickable(
                                                 onClick = {

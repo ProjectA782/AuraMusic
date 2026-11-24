@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,10 +29,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +66,7 @@ import com.aura.music.constants.CONTENT_TYPE_HEADER
 import com.aura.music.constants.CONTENT_TYPE_SONG
 import com.aura.music.constants.HideExplicitKey
 import com.aura.music.constants.SongFilter
+import com.aura.music.LocalAuraTvShell
 import com.aura.music.constants.SongFilterKey
 import com.aura.music.constants.SongSortDescendingKey
 import com.aura.music.constants.SongSortType
@@ -78,7 +77,9 @@ import com.aura.music.extensions.matchesNormalizedQuery
 import com.aura.music.extensions.normalizeForSearch
 import com.aura.music.extensions.toMediaItem
 import com.aura.music.playback.queues.ListQueue
+import com.aura.music.ui.aura.AuraPillButton
 import com.aura.music.ui.component.ChipsRow
+import com.aura.music.ui.component.FilterExitChip
 import com.aura.music.ui.component.DefaultDialog
 import com.aura.music.ui.component.DraggableScrollbar
 import com.aura.music.ui.component.HideOnScrollFAB
@@ -88,6 +89,7 @@ import com.aura.music.ui.component.LocalMenuState
 import com.aura.music.ui.component.SongListItem
 import com.aura.music.ui.component.SortHeader
 import com.aura.music.ui.menu.SongMenu
+import com.aura.music.ui.theme.rememberTvRowNav
 import com.aura.music.ui.utils.isScrollingUp
 import com.aura.music.utils.rememberEnumPreference
 import com.aura.music.utils.rememberPreference
@@ -252,6 +254,7 @@ fun LibrarySongsScreen(
     }
 
     val lazyListState = rememberLazyListState()
+    val tvRowNav = rememberTvRowNav(lazyListState)
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scrollToTop =
@@ -336,19 +339,27 @@ fun LibrarySongsScreen(
             ) {
                 Row {
                     Spacer(Modifier.width(12.dp))
-                    FilterChip(
-                        label = { Text(stringResource(R.string.songs)) },
-                        selected = true,
-                        colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surface),
+                    FilterExitChip(
+                        label = stringResource(R.string.songs),
                         onClick = onDeselect,
-                        shape = RoundedCornerShape(16.dp),
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.close),
-                                contentDescription = "",
-                            )
-                        },
                     )
+                    // The touch build reaches shuffle from a floating button. A remote has no hover, and the
+                    // file picker that button swaps in for the Uploaded filter is not something a TV drives,
+                    // so shuffle moves into the band and the picker stays on touch devices.
+                    if (LocalAuraTvShell.current && filter != SongFilter.UPLOADED && filteredSongs.isNotEmpty()) {
+                        AuraPillButton(
+                            label = stringResource(R.string.shuffle),
+                            icon = R.drawable.aura_ic_shuffle,
+                            onClick = {
+                                playerConnection.playQueue(
+                                    ListQueue(
+                                        title = queueAllSongsStr,
+                                        items = filteredSongs.shuffled().map { it.toMediaItem() },
+                                    ),
+                                )
+                            },
+                        )
+                    }
                     ChipsRow(
                         chips =
                             listOf(
@@ -435,6 +446,11 @@ fun LibrarySongsScreen(
                 key = { index, item -> "${item.song.id}_$index" },
                 contentType = { _, _ -> CONTENT_TYPE_SONG },
             ) { index, song ->
+                // The chain covers the tracks only. The filter row and the sort band above it are not
+                // counted stops: UP from the first row is handed back there, and the search's own focus
+                // search picks whichever control of the band is currently composed — the field while
+                // typing, the trigger once it has collapsed.
+                val itemKey = "${song.song.id}_$index"
                 SongListItem(
                     song = song,
                     showInLibraryIcon = true,
@@ -452,6 +468,7 @@ fun LibrarySongsScreen(
                                     )
                                 }
                             },
+                            modifier = tvRowNav.tile(index, 1),
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.more_vert),
@@ -461,6 +478,18 @@ fun LibrarySongsScreen(
                     },
                     modifier =
                         Modifier
+                            // The nav's requester has to sit above the clickable: it resolves by
+                            // walking the chain toward the inner modifiers, so a tile chained after
+                            // the focusable finds nothing to light.
+                            .then(
+                                tvRowNav.row(
+                                    index = index,
+                                    itemKey = itemKey,
+                                    rowCount = filteredSongs.size,
+                                ),
+                            )
+                            .focusGroup()
+                            .then(tvRowNav.tile(index, 0))
                             .fillMaxWidth()
                             .clickable {
                                 if (song.id == mediaMetadata?.id) {
@@ -474,46 +503,50 @@ fun LibrarySongsScreen(
                                         ),
                                     )
                                 }
-                            }.animateItem(),
+                            }
+                            .animateItem(),
                 )
             }
         }
 
-        DraggableScrollbar(
-            modifier = Modifier
-                .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
-                .align(Alignment.CenterEnd),
-            scrollState = lazyListState,
-            headerItems = 2,
-        )
+        // Both of these are drag/touch affordances: a remote scrolls the list itself, and neither can be
+        // reached or moved by the D-pad.
+        if (!LocalAuraTvShell.current) {
+            DraggableScrollbar(
+                modifier = Modifier
+                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues())
+                    .align(Alignment.CenterEnd),
+                scrollState = lazyListState,
+                headerItems = 2,
+            )
 
-        // Show upload FAB when on UPLOADED filter, shuffle FAB otherwise
-
-        HideOnScrollFAB(
-            visible = if (filter == SongFilter.UPLOADED) true else filteredSongs.isNotEmpty(),
-            lazyListState = lazyListState,
-            icon = if (filter == SongFilter.UPLOADED) R.drawable.upload else R.drawable.shuffle,
-            onClick = {
-                if (filter == SongFilter.UPLOADED) {
-                    filePickerLauncher.launch(
-                        arrayOf(
-                            "audio/mpeg",
-                            "audio/mp4",
-                            "audio/x-m4a",
-                            "audio/flac",
-                            "audio/ogg",
-                            "audio/x-ms-wma",
-                        ),
-                    )
-                } else {
-                    playerConnection.playQueue(
-                        ListQueue(
-                            title = queueAllSongsStr,
-                            items = filteredSongs.shuffled().map { it.toMediaItem() },
-                        ),
-                    )
-                }
-            },
-        )
+            // Show upload FAB when on UPLOADED filter, shuffle FAB otherwise
+            HideOnScrollFAB(
+                visible = if (filter == SongFilter.UPLOADED) true else filteredSongs.isNotEmpty(),
+                lazyListState = lazyListState,
+                icon = if (filter == SongFilter.UPLOADED) R.drawable.upload else R.drawable.shuffle,
+                onClick = {
+                    if (filter == SongFilter.UPLOADED) {
+                        filePickerLauncher.launch(
+                            arrayOf(
+                                "audio/mpeg",
+                                "audio/mp4",
+                                "audio/x-m4a",
+                                "audio/flac",
+                                "audio/ogg",
+                                "audio/x-ms-wma",
+                            ),
+                        )
+                    } else {
+                        playerConnection.playQueue(
+                            ListQueue(
+                                title = queueAllSongsStr,
+                                items = filteredSongs.shuffled().map { it.toMediaItem() },
+                            ),
+                        )
+                    }
+                },
+            )
+        }
     }
 }

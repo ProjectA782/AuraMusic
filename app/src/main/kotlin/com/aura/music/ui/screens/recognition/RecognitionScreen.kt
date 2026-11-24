@@ -9,89 +9,92 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.aura.music.ui.component.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.aura.music.LocalDatabase
+import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.R
 import com.aura.music.db.entities.RecognitionHistory
+import com.aura.music.ui.aura.AuraMock
+import com.aura.music.ui.aura.AuraPillButton
+import com.aura.music.ui.aura.AuraText
+import com.aura.music.ui.aura.FullRound
+import com.aura.music.ui.aura.LocalAuraPageFocus
+import com.aura.music.ui.aura.apx
+import com.aura.music.ui.aura.auraFocused
+import com.aura.music.ui.aura.auraPagePadding
 import com.aura.music.ui.component.IconButton
+import com.aura.music.ui.component.TopAppBar
 import com.aura.music.ui.utils.backToMain
 import com.aura.music.utils.SearchRoutes
 import com.aura.shazamkit.models.RecognitionResult
 import com.aura.shazamkit.models.RecognitionStatus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
+/** How long the page keeps aiming at the control its state just swapped in, and how often. */
+private const val StateAnchorChecks = 8
+private const val StateAnchorIntervalMs = 140L
+
+/**
+ * Song recognition, told through the shell's page language.
+ *
+ * Upstream drew this as a phone screen: a Material scaffold whose only control was a tap target, so
+ * a remote had nothing to stop on. The recogniser itself - the service, the permission request, the
+ * history write, the six states - is untouched; what changed is that every state now ends in a pill
+ * or a disc the D-pad can land on, sized and coloured like the rest of the television shell, and the
+ * page re-aims at that control whenever a state swap disposes the one that held the selector.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecognitionScreen(
@@ -198,101 +201,198 @@ fun RecognitionScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.recognize_music)) },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { navController.navigateUp() },
-                        onLongClick = { navController.backToMain() },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.arrow_back),
-                            contentDescription = null,
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { navController.navigate("recognition_history") }) {
-                        Icon(
-                            painter = painterResource(R.drawable.history),
-                            contentDescription = stringResource(R.string.recognition_history),
-                        )
-                    }
-                },
-            )
-        },
-    ) { paddingValues ->
-        Column(
+    // Each state's control offers itself to the rail in composition order, so the offer list always
+    // holds exactly what the current state can act on. The shell re-arms on navigation but not on a
+    // state swap inside one screen, and by then the control that carried the selector is gone - so
+    // ask the page for its first offer again, and stop as soon as one reports holding it.
+    val pageAnchors = LocalAuraPageFocus.current
+    LaunchedEffect(recognitionStatus) {
+        val anchors = pageAnchors ?: return@LaunchedEffect
+        var tries = 0
+        while (tries < StateAnchorChecks && !anchors.anchorHoldsFocus) {
+            anchors.requestFirstFocus()
+            delay(StateAnchorIntervalMs)
+            tries++
+        }
+    }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(
+                    LocalPlayerAwareWindowInsets.current.only(
+                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                    ),
+                ),
+    ) {
+        // First child and pinned, as on every page converted before this one: emitted after the body
+        // this bar becomes a sibling of it and paints across the middle of the viewport.
+        TopAppBar(
+            title = { Text(stringResource(R.string.recognize_music)) },
+            navigationIcon = {
+                IconButton(
+                    onClick = { navController.navigateUp() },
+                    onLongClick = { navController.backToMain() },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.arrow_back),
+                        contentDescription = null,
+                    )
+                }
+            },
+            actions = {
+                IconButton(
+                    onClick = { navController.navigate("recognition_history") },
+                    onLongClick = { navController.navigate("recognition_history") },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.history),
+                        contentDescription = stringResource(R.string.recognition_history),
+                    )
+                }
+            },
+        )
+
+        Box(
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = auraPagePadding()),
+            contentAlignment = Alignment.Center,
         ) {
-            AnimatedContent(
-                targetState = recognitionStatus,
-                transitionSpec = {
-                    (fadeIn() + scaleIn()).togetherWith(fadeOut() + scaleOut())
-                },
-                label = "recognition_content",
-            ) { status ->
-                when (status) {
-                    is RecognitionStatus.Ready -> {
-                        ReadyState(onStartRecognition = ::startRecognition)
-                    }
+            when (val status = recognitionStatus) {
+                is RecognitionStatus.Ready -> {
+                    ReadyState(onStartRecognition = ::startRecognition)
+                }
 
-                    is RecognitionStatus.Listening -> {
-                        ListeningState(
-                            onCancel = {
-                                com.aura.music.recognition.MusicRecognitionService
-                                    .reset()
-                            },
-                        )
-                    }
+                is RecognitionStatus.Listening -> {
+                    ListeningState(
+                        onCancel = {
+                            com.aura.music.recognition.MusicRecognitionService
+                                .reset()
+                        },
+                    )
+                }
 
-                    is RecognitionStatus.Processing -> {
-                        ProcessingState()
-                    }
+                is RecognitionStatus.Processing -> {
+                    ProcessingState()
+                }
 
-                    is RecognitionStatus.Success -> {
-                        SuccessState(
-                            result = status.result,
-                            onPlayOnApp = { result ->
-                                // Search for the track on YouTube Music
-                                val searchQuery = "${result.title} ${result.artist}"
-                                navController.navigate(SearchRoutes.resultRoute(searchQuery))
-                            },
-                            onTryAgain = {
-                                startRecognition()
-                            },
-                            onClose = ::resetToReady,
-                            onSaveToHistory = ::saveToHistory,
-                        )
-                    }
+                is RecognitionStatus.Success -> {
+                    SuccessState(
+                        result = status.result,
+                        onPlayOnApp = { result ->
+                            // Search for the track on YouTube Music
+                            val searchQuery = "${result.title} ${result.artist}"
+                            navController.navigate(SearchRoutes.resultRoute(searchQuery))
+                        },
+                        onTryAgain = {
+                            startRecognition()
+                        },
+                        onClose = ::resetToReady,
+                        onSaveToHistory = ::saveToHistory,
+                    )
+                }
 
-                    is RecognitionStatus.NoMatch -> {
-                        NoMatchState(
-                            message = status.message,
-                            onTryAgain = {
-                                startRecognition()
-                            },
-                        )
-                    }
+                is RecognitionStatus.NoMatch -> {
+                    NoMatchState(
+                        message = status.message,
+                        onTryAgain = {
+                            startRecognition()
+                        },
+                    )
+                }
 
-                    is RecognitionStatus.Error -> {
-                        ErrorState(
-                            message = status.message,
-                            onTryAgain = {
-                                startRecognition()
-                            },
-                        )
-                    }
+                is RecognitionStatus.Error -> {
+                    ErrorState(
+                        message = status.message,
+                        onTryAgain = {
+                            startRecognition()
+                        },
+                    )
                 }
             }
+        }
+    }
+}
+
+/**
+ * The listening disc. Ring and core share one pulse, read inside the layer rather than the body: a
+ * state read here would recompose the page sixty times a second on a device with no spare frames.
+ */
+@Composable
+private fun RecognitionDisc(
+    onClick: () -> Unit,
+    pulse: Boolean,
+) {
+    val scale =
+        if (pulse) {
+            rememberInfiniteTransition(label = "recognition pulse").animateFloat(
+                initialValue = 1f,
+                targetValue = 1.08f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(900, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "recognition pulse scale",
+            )
+        } else {
+            null
+        }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(300.apx()),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .graphicsLayer {
+                        val s = scale?.value ?: 1f
+                        scaleX = s * 1.12f
+                        scaleY = s * 1.12f
+                    }
+                    .size(300.apx())
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors =
+                                listOf(
+                                    AuraMock.Primary.copy(alpha = 0.24f),
+                                    AuraMock.Primary.copy(alpha = 0.07f),
+                                    Color.Transparent,
+                                ),
+                        ),
+                    ),
+        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .auraFocused(corner = FullRound, grow = false)
+                    .graphicsLayer {
+                        val s = scale?.value ?: 1f
+                        scaleX = s
+                        scaleY = s
+                    }
+                    .size(196.apx())
+                    .clip(CircleShape)
+                    .background(AuraMock.Primary)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick,
+                    ),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.mic),
+                contentDescription = null,
+                tint = AuraMock.OnPrimary,
+                modifier = Modifier.size(84.apx()),
+            )
         }
     }
 }
@@ -301,179 +401,88 @@ fun RecognitionScreen(
 private fun ReadyState(onStartRecognition: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(36.apx()),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(200.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors =
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                    Color.Transparent,
-                                ),
-                        ),
-                    ).clickable { onStartRecognition() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(160.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.mic),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        }
-
-        Text(
-            text = stringResource(R.string.tap_to_recognize),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+        RecognitionDisc(onClick = onStartRecognition, pulse = false)
+        AuraText(
+            value = stringResource(R.string.tap_to_recognize),
+            px = 30,
+            weight = FontWeight.Medium,
+            color = AuraMock.Muted,
         )
     }
 }
 
 @Composable
 private fun ListeningState(onCancel: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "scale",
-    )
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(28.apx()),
     ) {
-        // Container large enough for scaled animation (200dp * 1.2 = 240dp)
-        Box(
-            modifier = Modifier.size(260.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            // Outer pulsing ring
-            Box(
-                modifier =
-                    Modifier
-                        .size(200.dp)
-                        .scale(scale)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-            )
-
-            // Inner pulsing ring
-            Box(
-                modifier =
-                    Modifier
-                        .size(180.dp)
-                        .scale(scale * 0.9f)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-            )
-
-            // Main button
-            Box(
-                modifier =
-                    Modifier
-                        .size(160.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable { onCancel() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.mic),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        }
-
-        Text(
-            text = stringResource(R.string.listening),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+        RecognitionDisc(onClick = onCancel, pulse = true)
+        AuraText(
+            value = stringResource(R.string.listening),
+            px = 30,
+            weight = FontWeight.Bold,
+            color = AuraMock.Primary,
         )
-
-        OutlinedButton(onClick = onCancel) {
-            Text(stringResource(R.string.cancel))
-        }
+        AuraPillButton(
+            label = stringResource(R.string.cancel),
+            icon = R.drawable.close,
+            onClick = onCancel,
+        )
     }
 }
 
 @Composable
 private fun ProcessingState() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        val infiniteTransition = rememberInfiniteTransition(label = "rotate")
-        val rotation by infiniteTransition.animateFloat(
+    val rotation =
+        rememberInfiniteTransition(label = "recognition processing").animateFloat(
             initialValue = 0f,
             targetValue = 360f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(2000, easing = LinearEasing),
-                ),
-            label = "rotation",
+            animationSpec = infiniteRepeatable(animation = tween(1600, easing = LinearEasing)),
+            label = "recognition processing rotation",
         )
 
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(36.apx()),
+    ) {
         Box(
-            modifier = Modifier.size(160.dp),
             contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .graphicsLayer { rotationZ = rotation.value }
+                    .size(220.apx())
+                    .clip(CircleShape)
+                    .background(
+                        Brush.sweepGradient(
+                            colors =
+                                listOf(
+                                    Color.Transparent,
+                                    AuraMock.Primary.copy(alpha = 0.35f),
+                                    AuraMock.Primary,
+                                ),
+                        ),
+                    ),
         ) {
             Box(
-                modifier =
-                    Modifier
-                        .size(160.dp)
-                        .clip(CircleShape)
-                        .border(
-                            width = 4.dp,
-                            brush =
-                                Brush.sweepGradient(
-                                    colors =
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary,
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                            Color.Transparent,
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                            MaterialTheme.colorScheme.primary,
-                                        ),
-                                ),
-                            shape = CircleShape,
-                        ),
-            )
-
-            Icon(
-                painter = painterResource(R.drawable.music_note),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(184.apx()).clip(CircleShape).background(AuraMock.Page),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.music_note),
+                    contentDescription = null,
+                    tint = AuraMock.Primary,
+                    modifier = Modifier.size(72.apx()),
+                )
+            }
         }
-
-        Text(
-            text = stringResource(R.string.processing),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+        AuraText(
+            value = stringResource(R.string.processing),
+            px = 30,
+            weight = FontWeight.Medium,
+            color = AuraMock.Muted,
         )
     }
 }
@@ -493,104 +502,71 @@ private fun SuccessState(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(32.apx()),
     ) {
-        // Album art
-        Card(
+        Box(
             modifier =
                 Modifier
-                    .size(180.dp)
-                    .aspectRatio(1f),
-            shape = RoundedCornerShape(com.aura.music.constants.ThumbnailCornerRadius),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    .size(340.apx())
+                    .clip(RoundedCornerShape(28.apx()))
+                    .background(AuraMock.Panel),
         ) {
             AsyncImage(
                 model = result.coverArtHqUrl ?: result.coverArtUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                contentDescription = result.title,
                 contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Track info
-        Text(
-            text = result.title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        Text(
-            text = result.artist,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        result.album?.let { album ->
-            Text(
-                text = album,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Action buttons - stacked vertically
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.apx()),
         ) {
-            Button(
+            AuraText(
+                value = result.title,
+                px = 52,
+                weight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 2,
+            )
+            AuraText(
+                value = result.artist,
+                px = 30,
+                weight = FontWeight.Medium,
+                color = AuraMock.Muted,
+            )
+            result.album?.let { album ->
+                AuraText(
+                    value = album,
+                    px = 24,
+                    color = AuraMock.Muted.copy(alpha = 0.75f),
+                )
+            }
+        }
+
+        // The primary action composes first, so it is the offer the rail's RIGHT and the page's own
+        // re-anchor both reach for.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(20.apx()),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AuraPillButton(
+                label = stringResource(R.string.play_on_app),
+                icon = R.drawable.aura_ic_play,
+                filled = true,
                 onClick = { onPlayOnApp(result) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.play),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.play_on_app))
-            }
-
-            FilledTonalButton(
+            )
+            AuraPillButton(
+                label = stringResource(R.string.re_listen),
+                icon = R.drawable.mic,
                 onClick = onTryAgain,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.mic),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.re_listen))
-            }
-
-            // Close button - Material 3 Expressive outlined style
-            OutlinedButton(
+            )
+            AuraPillButton(
+                label = stringResource(R.string.close),
+                icon = R.drawable.close,
                 onClick = onClose,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.close),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.close))
-            }
+            )
         }
     }
 }
@@ -600,50 +576,12 @@ private fun NoMatchState(
     message: String,
     onTryAgain: () -> Unit,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.errorContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.close),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-            )
-        }
-
-        Text(
-            text = stringResource(R.string.no_match_found),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp),
-        )
-
-        Button(onClick = onTryAgain) {
-            Icon(
-                painter = painterResource(R.drawable.refresh),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.try_again))
-        }
-    }
+    ResultMessageState(
+        icon = R.drawable.close,
+        title = stringResource(R.string.no_match_found),
+        message = message,
+        onTryAgain = onTryAgain,
+    )
 }
 
 @Composable
@@ -651,48 +589,63 @@ private fun ErrorState(
     message: String,
     onTryAgain: () -> Unit,
 ) {
+    ResultMessageState(
+        icon = R.drawable.error,
+        title = stringResource(R.string.recognition_error),
+        message = message,
+        onTryAgain = onTryAgain,
+    )
+}
+
+/**
+ * A recognition that came back with nothing to play. The two states differ only in glyph and heading,
+ * so they share the shape: a flat error plate, the reason, and the one pill that retries.
+ */
+@Composable
+private fun ResultMessageState(
+    icon: Int,
+    title: String,
+    message: String,
+    onTryAgain: () -> Unit,
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(28.apx()),
     ) {
         Box(
+            contentAlignment = Alignment.Center,
             modifier =
                 Modifier
-                    .size(120.dp)
+                    .size(168.apx())
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.errorContainer),
-            contentAlignment = Alignment.Center,
         ) {
             Icon(
-                painter = painterResource(R.drawable.error),
+                painter = painterResource(icon),
                 contentDescription = null,
-                modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(76.apx()),
             )
         }
-
-        Text(
-            text = stringResource(R.string.recognition_error),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+        AuraText(
+            value = title,
+            px = 40,
+            weight = FontWeight.Bold,
+            color = Color.White,
         )
-
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp),
+        AuraText(
+            value = message,
+            px = 24,
+            color = AuraMock.Muted,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 40.apx()),
         )
-
-        Button(onClick = onTryAgain) {
-            Icon(
-                painter = painterResource(R.drawable.refresh),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.try_again))
-        }
+        AuraPillButton(
+            label = stringResource(R.string.try_again),
+            icon = R.drawable.refresh,
+            filled = true,
+            onClick = onTryAgain,
+        )
     }
 }

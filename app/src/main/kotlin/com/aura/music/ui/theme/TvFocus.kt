@@ -8,13 +8,17 @@ package com.aura.music.ui.theme
 import android.view.View
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -50,6 +54,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -172,13 +177,104 @@ private fun DrawScope.drawFocusRing(
 
 @Composable
 fun rememberTvRowNav(listState: LazyListState): TvRowNav {
-    val nav = remember(listState) { TvRowNav(listState) }
+    val nav = remember(listState) { TvRowNav(LazyListFeed(listState)) }
     // The nav outlives every row: its moves are launched on its own scope, so release it with the
     // screen rather than leaking a runnable scope past it.
     DisposableEffect(nav) {
         onDispose { nav.release() }
     }
     return nav
+}
+
+/**
+ * The same chain over a grid.
+ *
+ * Nothing here is grid-specific: a grid lays [rememberGridColumnCount] cells per row, so the caller
+ * divides its cell index by that to name the row and the column, and [row] and [tile] are handed the
+ * pair. [refreshRowPositions] then reads the lane count back out of the gap between two rows it can
+ * see, which is where the item maths for a neighbour below the fold comes from.
+ */
+@Composable
+fun rememberTvRowNav(gridState: LazyGridState): TvRowNav {
+    val nav = remember(gridState) { TvRowNav(LazyGridFeed(gridState)) }
+    DisposableEffect(nav) {
+        onDispose { nav.release() }
+    }
+    return nav
+}
+
+/**
+ * How many lanes this grid lays out, as a value that changes only when the count does.
+ *
+ * Reading `layoutInfo.maxSpan` straight at composition makes every cell of the grid depend on the
+ * layout, so a scroll re-composes the screenful — the modifier churn that starves the reveal. Lanes
+ * change on an orientation or density change and nowhere else, so this flow stays quiet.
+ */
+@Composable
+fun rememberGridColumnCount(gridState: LazyGridState): Int {
+    var columns by remember(gridState) { mutableIntStateOf(1) }
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.layoutInfo.maxSpan }
+            .distinctUntilChanged()
+            .collect { columns = it.coerceAtLeast(1) }
+    }
+    return columns
+}
+
+/** What the row nav needs from a feed: a table of what is on screen, and two ways to move it. */
+internal interface TvFeed {
+    val totalItemsCount: Int
+    val viewportStartOffset: Int
+    val viewportEndOffset: Int
+
+    /** The items the layout has placed, read once per press and per frame of a travel. */
+    fun visible(): List<TvPlacedItem>
+
+    suspend fun scrollToItem(index: Int, offset: Int)
+    suspend fun scrollBy(delta: Float)
+}
+
+/** One placed item: the key the page gave it, and where the layout put it on the main axis. */
+internal class TvPlacedItem(
+    val key: Any,
+    val index: Int,
+    val top: Int,
+    val bottom: Int,
+)
+
+private class LazyListFeed(private val state: LazyListState) : TvFeed {
+    override val totalItemsCount get() = state.layoutInfo.totalItemsCount
+    override val viewportStartOffset get() = state.layoutInfo.viewportStartOffset
+    override val viewportEndOffset get() = state.layoutInfo.viewportEndOffset
+
+    override fun visible() = state.layoutInfo.visibleItemsInfo.map {
+        TvPlacedItem(it.key, it.index, it.offset, it.offset + it.size)
+    }
+
+    override suspend fun scrollToItem(index: Int, offset: Int) = state.animateScrollToItem(index, offset)
+
+    override suspend fun scrollBy(delta: Float) {
+        state.animateScrollBy(delta)
+    }
+}
+
+private class LazyGridFeed(private val state: LazyGridState) : TvFeed {
+    override val totalItemsCount get() = state.layoutInfo.totalItemsCount
+    override val viewportStartOffset get() = state.layoutInfo.viewportStartOffset
+    override val viewportEndOffset get() = state.layoutInfo.viewportEndOffset
+
+    // A grid places on both axes. The nav only ever moves vertically, so the cross axis is left to
+    // the column the caller already counted out; the cell's height carries the row's bounds.
+    override fun visible() = state.layoutInfo.visibleItemsInfo.map {
+        val top = it.offset.y.toFloat().roundToInt()
+        TvPlacedItem(it.key, it.index, top, top + it.size.height)
+    }
+
+    override suspend fun scrollToItem(index: Int, offset: Int) = state.animateScrollToItem(index, offset)
+
+    override suspend fun scrollBy(delta: Float) {
+        state.animateScrollBy(delta)
+    }
 }
 
 /**
@@ -195,7 +291,7 @@ fun rememberTvRowNav(listState: LazyListState): TvRowNav {
  * nothing on screen to light up. A press whose target is already visible moves the selector and
  * leaves the page exactly where it was.
  */
-class TvRowNav internal constructor(private val listState: LazyListState) {
+class TvRowNav internal constructor(private val feed: TvFeed) {
     private val requesters = mutableMapOf<String, FocusRequester>()
 
     /** Which item in the list hosts each row, claimed while the row composes and dropped when it goes. */
@@ -439,7 +535,7 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
             val travelling = scope.launch {
                 claimScroll()
                 try {
-                    listState.animateScrollToItem(anchor, revealOffset())
+                    feed.scrollToItem(anchor, revealOffset())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -488,7 +584,7 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
     /** Records where this layout places each row, and what two rows on screen say about their gap. */
     private fun refreshRowPositions() {
         val placed = HashMap<Int, Int>()
-        listState.layoutInfo.visibleItemsInfo.forEach { item ->
+        feed.visible().forEach { item ->
             rowOfItem[item.key]?.let { row -> placed[row] = item.index }
         }
         val rows = placed.keys.sorted()
@@ -507,7 +603,7 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
         from: Int,
     ): Int {
         val fromIndex = rowPositions[from] ?: target
-        val lastIndex = (listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+        val lastIndex = (feed.totalItemsCount - 1).coerceAtLeast(0)
         return (fromIndex + itemsPerRow * (target - from)).coerceIn(0, lastIndex)
     }
 
@@ -519,14 +615,13 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
         anchor: Int,
         down: Boolean,
     ): Int? {
-        val info = listState.layoutInfo
-        val edge = info.visibleItemsInfo
+        val edge = feed.visible()
         val next = if (down) {
             (edge.lastOrNull()?.index ?: anchor) + 1
         } else {
             (edge.firstOrNull()?.index ?: anchor) - 1
         }
-        if (next == anchor || next !in 0 until info.totalItemsCount) {
+        if (next == anchor || next !in 0 until feed.totalItemsCount) {
             Timber.w("tvRowNav: no row beyond item $anchor — nothing left to try")
             return null
         }
@@ -537,15 +632,12 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
     /** The row's top and bottom in the current layout, or null while the list does not place it. */
     private fun rowBounds(row: Int): Pair<Int, Int>? {
         val index = rowPositions[row] ?: return null
-        val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-            ?: return null
-        return item.offset to item.offset + item.size
+        val item = feed.visible().firstOrNull { it.index == index } ?: return null
+        return item.top to item.bottom
     }
 
-    private fun band(): IntRange {
-        val info = listState.layoutInfo
-        return info.viewportStartOffset..(info.viewportEndOffset * BandBottom).roundToInt()
-    }
+    private fun band(): IntRange =
+        feed.viewportStartOffset..(feed.viewportEndOffset * BandBottom).roundToInt()
 
     private fun isInBand(row: Int): Boolean {
         val bounds = rowBounds(row) ?: return false
@@ -563,7 +655,7 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
             else -> return
         }
         claimScroll()
-        listState.animateScrollBy(delta)
+        feed.scrollBy(delta)
         refreshRowPositions()
     }
 
@@ -575,7 +667,7 @@ class TvRowNav internal constructor(private val listState: LazyListState) {
     }
 
     private fun revealOffset(): Int =
-        (listState.layoutInfo.viewportEndOffset * RevealLine).roundToInt()
+        (feed.viewportEndOffset * RevealLine).roundToInt()
 
     private fun nearestRequester(row: Int): FocusRequester? {
         val cols = requesters.keys

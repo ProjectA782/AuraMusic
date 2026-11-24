@@ -62,9 +62,9 @@ android {
         // What the updater compares is versionName, but Android will not overwrite an installed
         // package with a different APK of the same versionCode, so every published release moves
         // this number as well: 1 was v1.0.0 and v1.0.1, 2 is v1.0.2, 3 is v1.0.3, 4 is v1.0.4,
-        // 5 is v1.0.5, 6 is v1.0.6, 7 is v1.0.7.
-        versionCode = 7
-        versionName = versionNameOverride ?: "1.0.7"
+        // 5 is v1.0.5, 6 is v1.0.6, 7 is v1.0.7, 8 is v1.0.8.
+        versionCode = 8
+        versionName = versionNameOverride ?: "1.0.8"
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         buildCommit?.let { versionName = "$baseVersionName+$it" }
@@ -78,6 +78,12 @@ android {
         }
 
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
+
+        // This APK is the television product: MainActivity shows one "Android TV only" screen
+        // instead of the app whenever the device is not television-class. The planned phone client
+        // becomes its own product flavour and sets this to false; until then a single build serves
+        // both, so the guard has to be switchable without touching the guard itself.
+        buildConfigField("Boolean", "TV_ONLY", "true")
 
         // Crash reporting target: GitHub repo (owner/name) where Issues are created,
         // and a fine-grained PAT with issues:write scoped to that repo only.

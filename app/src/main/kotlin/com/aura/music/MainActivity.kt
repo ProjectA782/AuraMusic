@@ -193,6 +193,8 @@ import com.aura.music.ui.aura.AuraPx
 import com.aura.music.ui.aura.AuraRail
 import com.aura.music.ui.aura.AuraSplash
 import com.aura.music.ui.aura.AuraSplashSeen
+import com.aura.music.ui.aura.AuraTelevisionOnly
+import com.aura.music.ui.aura.auraIsTelevisionClass
 import com.aura.music.ui.aura.AuraPageAnchors
 import com.aura.music.ui.aura.AuraRailAnchor
 import com.aura.music.ui.aura.AuraNowPlayingBanner
@@ -519,6 +521,14 @@ class MainActivity : FragmentActivity() {
             safeDataStoreEdit { settings ->
                 settings[LastSeenVersionKey] = BuildConfig.BASE_VERSION_NAME
             }
+        }
+
+        // The television guard. Android's manifest filtering already refuses to offer this APK to
+        // phones, but a sideloaded copy installs anyway and then renders the touch layout that is
+        // still in the tree — so the app itself refuses, and shows the one screen it will ever show.
+        if (BuildConfig.TV_ONLY && !auraIsTelevisionClass(this)) {
+            setContent { AuraTelevisionOnly() }
+            return
         }
 
         setContent {

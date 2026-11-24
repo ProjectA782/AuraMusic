@@ -35,15 +35,15 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.aura.music.utils.BrokenLogin
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,9 +51,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import com.aura.music.ui.component.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,7 +65,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.datastore.preferences.core.edit
 import androidx.navigation.NavController
@@ -78,6 +79,11 @@ import com.aura.music.constants.SpotifySpKeyKey
 import com.aura.music.constants.SpotifyTokenExpiryKey
 import com.aura.music.constants.SpotifyUserIdKey
 import com.aura.music.constants.SpotifyUsernameKey
+import com.aura.music.ui.aura.AuraMock
+import com.aura.music.ui.aura.AuraPillButton
+import com.aura.music.ui.aura.AuraText
+import com.aura.music.ui.aura.LocalAuraPageFocus
+import com.aura.music.ui.aura.apx
 import com.aura.music.ui.component.IconButton
 import com.aura.music.ui.utils.backToMain
 import com.aura.music.utils.dataStore
@@ -104,6 +110,22 @@ fun SpotifyLoginScreen(navController: NavController) {
     var retryCount by remember { mutableIntStateOf(0) }
     val tokenFetchStarted = remember { AtomicBoolean(false) }
 
+    // Once the token exchange fails, the retry pill is the only thing on this page a remote can act
+    // on - the web view behind the panel still holds the selector, and a page whose only answer is
+    // BACK reads as a hang. The pill offers itself to the rail like any shell control; the page aims
+    // at the offer the moment the error lands.
+    val pageAnchors = LocalAuraPageFocus.current
+    LaunchedEffect(hasError, isProcessing) {
+        val anchors = pageAnchors ?: return@LaunchedEffect
+        if (!hasError || !isProcessing) return@LaunchedEffect
+        var tries = 0
+        while (tries < 8 && !anchors.anchorHoldsFocus) {
+            anchors.requestFirstFocus()
+            delay(140L)
+            tries++
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(stringResource(R.string.spotify_login)) },
@@ -118,7 +140,11 @@ fun SpotifyLoginScreen(navController: NavController) {
         )
 
         if (isLoading || isProcessing) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = AuraMock.Primary,
+                trackColor = AuraMock.Panel,
+            )
         }
 
         // The mini-player is drawn over this screen, so the WebView has to stop above it or the
@@ -452,28 +478,41 @@ fun SpotifyLoginScreen(navController: NavController) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface),
+                        .background(AuraMock.Page),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(32.apx()),
+                        modifier = Modifier.padding(horizontal = 64.apx()),
+                    ) {
                         if (!hasError) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(72.apx()),
+                                strokeWidth = 4.apx(),
+                                color = AuraMock.Primary,
+                            )
                         }
-                        Text(
-                            text = statusMessage.ifEmpty {
+                        AuraText(
+                            value = statusMessage.ifEmpty {
                                 stringResource(R.string.spotify_logging_in)
                             },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (hasError) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
+                            px = 28,
+                            weight = if (hasError) FontWeight.Bold else FontWeight.Medium,
+                            color =
+                                if (hasError) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    AuraMock.Muted
+                                },
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         if (hasError) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            TextButton(
+                            AuraPillButton(
+                                label = stringResource(R.string.retry),
+                                icon = R.drawable.refresh,
+                                filled = true,
                                 onClick = {
                                     hasError = false
                                     isProcessing = false
@@ -481,10 +520,7 @@ fun SpotifyLoginScreen(navController: NavController) {
                                     tokenFetchStarted.set(false)
                                     retryCount++
                                 },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            ) {
-                                Text(stringResource(R.string.retry))
-                            }
+                            )
                         }
                     }
                 }
